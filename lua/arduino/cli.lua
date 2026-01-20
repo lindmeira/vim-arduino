@@ -115,10 +115,6 @@ function M.get_compile_command(extra_args)
   else
     -- Old arduino executable
     local exe = util.get_arduino_executable()
-    if config.options.run_headless then
-      exe = vim.fn.fnamemodify(vim.api.nvim_get_runtime_file('bin/run-headless', false)[1], ':p') .. ' ' .. exe
-      -- Note: run-headless path resolution might need adjustment
-    end
     cmd = exe .. ' --verify --board ' .. board
     local port = M.get_port()
     if port then

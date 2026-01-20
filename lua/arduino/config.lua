@@ -9,7 +9,6 @@ M.defaults = {
   build_path = '{project_dir}/build',
   serial_baud = 9600,
   auto_baud = true,
-  run_headless = false,
   serial_port_globs = {
     '/dev/ttyACM*',
     '/dev/ttyUSB*',
@@ -38,7 +37,6 @@ function M.setup(opts)
     build_path = vim.g.arduino_build_path,
     serial_baud = vim.g.arduino_serial_baud,
     auto_baud = vim.g.arduino_auto_baud,
-    run_headless = vim.g.arduino_run_headless,
     serial_port_globs = vim.g.arduino_serial_port_globs,
     use_cli = vim.g.arduino_use_cli,
   }
@@ -49,10 +47,6 @@ function M.setup(opts)
   -- Detect arduino-cli if use_cli is null/nil (though we defaulted to true above, let's be smart)
   if M.options.use_cli == nil then
     M.options.use_cli = vim.fn.executable 'arduino-cli' == 1
-  end
-
-  if M.options.run_headless == nil then
-    M.options.run_headless = vim.fn.executable 'Xvfb' == 1
   end
 end
 
