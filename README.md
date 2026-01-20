@@ -1,205 +1,134 @@
 # vim-arduino
 
-Vim plugin for compiling, uploading, and debugging arduino sketches. It uses
-[arduino-cli](https://arduino.github.io/arduino-cli/latest/) when available
-(recommended), and falls back to using the Arduino IDE's [commandline
-interface](https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc)
-(new in 1.5.x).
+Neovim plugin for compiling, uploading, and debugging arduino sketches, completely rewritten in Lua. It uses
+[arduino-cli](https://arduino.github.io/arduino-cli/latest/) (recommended) and integrates seamlessly with `arduino-language-server` for a robust development environment.
 
 ## Installation
 
-vim-arduino works with all the usual plugin managers
+vim-arduino requires **Neovim 0.7+** and `arduino-cli`.
 
 <details>
-  <summary>Packer (Neovim only)</summary>
+  <summary>lazy.nvim</summary>
 
 ```lua
-require('packer').startup(function()
-    use {'stevearc/vim-arduino'}
-end)
-```
-
-</details>
-
-<details>
-  <summary>Paq (Neovim only)</summary>
-
-```lua
-require "paq" {
-    {'stevearc/vim-arduino'};
+{
+    "lindmeira/vim-arduino",
+    config = function()
+        require("arduino").setup({
+            -- Optional: default configuration overrides
+        })
+    end,
 }
 ```
 
 </details>
 
 <details>
-  <summary>vim-plug</summary>
+  <summary>packer.nvim</summary>
 
-```vim
-Plug 'stevearc/vim-arduino'
-```
-
-</details>
-
-<details>
-  <summary>dein</summary>
-
-```vim
-call dein#add('stevearc/vim-arduino')
-```
-
-</details>
-
-<details>
-  <summary>Pathogen</summary>
-
-```sh
-git clone --depth=1 https://github.com/stevearc/vim-arduino.git ~/.vim/bundle/
-```
-
-</details>
-
-<details>
-  <summary>Neovim native package</summary>
-
-```sh
-git clone --depth=1 https://github.com/stevearc/vim-arduino.git \
-  "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/pack/vim-arduino/start/vim-arduino
-```
-
-</details>
-
-<details>
-  <summary>Vim8 native package</summary>
-
-```sh
-git clone --depth=1 https://github.com/stevearc/vim-arduino.git \
-  "$HOME"/.vim/pack/vim-arduino/start/vim-arduino
+```lua
+use {
+    'lindmeira/vim-arduino',
+    config = function()
+        require('arduino').setup()
+    end
+}
 ```
 
 </details>
 
 ## Requirements
 
-Linux and Mac are tested and functioning. I have not tested on Windows, but have
-heard that it works via WSL. See [this
-issue](https://github.com/stevearc/vim-arduino/issues/4) for discussion.
+1.  **Neovim 0.7+**
+2.  **arduino-cli**: [Installation instructions](https://arduino.github.io/arduino-cli/latest/installation/)
+    *   Ensure `arduino-cli` is in your PATH.
+3.  **arduino-language-server** (Optional, but recommended for LSP support): [Installation instructions](https://github.com/arduino/arduino-language-server)
 
-It is recommended to use `arduino-cli`, installation instructions here: https://arduino.github.io/arduino-cli/latest/installation/
+## Configuration
 
-However it is also possible to use the arduino IDE directly. Download [Arduino
-IDE](https://www.arduino.cc/en/Main/Software) (version 1.5 or newer). Linux
-users make sure the `arduino` command is in your PATH.
+Configure the plugin using the `setup` function. Defaults are shown below:
+
+```lua
+require('arduino').setup({
+    -- Default board to use if no sketch.yaml is found.
+    -- Set to nil to force explicit selection, but 'arduino:avr:uno' is safer for LSP startup.
+    board = 'arduino:avr:uno', 
+    
+    -- Serial port globs to search for
+    serial_port_globs = { "/dev/ttyACM*", "/dev/ttyUSB*" },
+    
+    -- Baud rate for the internal serial monitor
+    serial_baud = 9600,
+    
+    -- Automatically detect baud rate from `Serial.begin()` in sketch
+    auto_baud = true,
+    
+    -- Use arduino-cli (strongly recommended)
+    use_cli = true,
+})
+```
+
+### Project Configuration & LSP
+
+This plugin is designed to work hand-in-hand with `arduino-cli` and `arduino-language-server` by strictly using `sketch.yaml` for project configuration.
+
+*   **Automatic Initialization:** When you open an Arduino sketch (`.ino`), the plugin automatically checks for a `sketch.yaml` file. If one does not exist, it creates a default one (using `arduino:avr:uno` and `/dev/ttyUSB0`) to ensure the Language Server can attach immediately without crashing.
+*   **Persistent Settings:** Commands like `:ArduinoChooseBoard` and `:ArduinoChoosePort` update the `sketch.yaml` file directly (using `default_fqbn` and `default_port` keys). This ensures your board selection persists across sessions.
+*   **LSP Integration:** When you change the board or port, the plugin automatically restarts the `arduino_language_server`. This ensures that diagnostics, completions, and code analysis are always correct for your selected hardware.
 
 ## Commands
 
 | Command                   | arg          | description                                                                 |
 | ------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `ArduinoAttach`           | [port]       | Automatically attach to your board (see `arduino-cli board attach -h`)      |
-| `ArduinoChooseBoard`      | [board]      | Select the type of board. With no arg, will present a choice dialog.        |
-| `ArduinoChooseProgrammer` | [programmer] | Select the programmer. With no arg, will present a choice dialog.           |
-| `ArduinoChoosePort`       | [port]       | Select the serial port. With no arg, will present a choice dialog.          |
-| `ArduinoVerify`           |              | Build the sketch.                                                           |
-| `ArduinoUpload`           |              | Build and upload the sketch.                                                |
-| `ArduinoSerial`           |              | Connect to the board for debugging over a serial port.                      |
-| `ArduinoUploadAndSerial`  |              | Build, upload, and connect for debugging.                                   |
-| `ArduinoInfo`             |              | Display internal information. Useful for debugging issues with vim-arduino. |
+| `ArduinoAttach`           | [port]       | Attach to a board via `arduino-cli board attach`. Updates `sketch.yaml`.    |
+| `ArduinoChooseBoard`      | [board]      | Select board FQBN. Updates `sketch.yaml` and restarts LSP.                  |
+| `ArduinoChooseProgrammer` | [programmer] | Select programmer.                                                          |
+| `ArduinoChoosePort`       | [port]       | Select serial port. Updates `sketch.yaml` and restarts LSP.                 |
+| `ArduinoVerify`           |              | Compile the sketch.                                                         |
+| `ArduinoUpload`           |              | Compile and upload the sketch.                                              |
+| `ArduinoSerial`           |              | Open a serial monitor buffer.                                               |
+| `ArduinoUploadAndSerial`  |              | Upload and then open serial monitor.                                        |
+| `ArduinoInfo`             |              | Display current configuration info.                                         |
 
-To make easy use of these, you may want to bind them to a key combination. You
-can put them in `ftplugin/arduino.vim`:
+## Keymappings
 
-```vim
-" Change these as desired
-nnoremap <buffer> <leader>aa <cmd>ArduinoAttach<CR>
-nnoremap <buffer> <leader>av <cmd>ArduinoVerify<CR>
-nnoremap <buffer> <leader>au <cmd>ArduinoUpload<CR>
-nnoremap <buffer> <leader>aus <cmd>ArduinoUploadAndSerial<CR>
-nnoremap <buffer> <leader>as <cmd>ArduinoSerial<CR>
-nnoremap <buffer> <leader>ab <cmd>ArduinoChooseBoard<CR>
-nnoremap <buffer> <leader>ap <cmd>ArduinoChooseProgrammer<CR>
+The plugin does not set keymappings by default. You can add them in your config or `ftplugin/arduino.lua`:
+
+```lua
+local map = vim.keymap.set
+map('n', '<leader>aa', '<cmd>ArduinoAttach<CR>', { desc = "Arduino Attach" })
+map('n', '<leader>av', '<cmd>ArduinoVerify<CR>', { desc = "Arduino Verify" })
+map('n', '<leader>au', '<cmd>ArduinoUpload<CR>', { desc = "Arduino Upload" })
+map('n', '<leader>aus', '<cmd>ArduinoUploadAndSerial<CR>', { desc = "Upload & Serial" })
+map('n', '<leader>as', '<cmd>ArduinoSerial<CR>', { desc = "Arduino Serial" })
+map('n', '<leader>ab', '<cmd>ArduinoChooseBoard<CR>', { desc = "Choose Board" })
+map('n', '<leader>ap', '<cmd>ArduinoChoosePort<CR>', { desc = "Choose Port" })
 ```
 
-## Configuration
+## Status Line / Lualine
 
-By default you should not _need_ to set any options for vim-arduino to work
-(especially if you're using `arduino-cli`, which tends to behave better). If
-you want to see what's available for customization, there is detailed
-information [in the vim docs](https://github.com/stevearc/vim-arduino/blob/master/doc/arduino.txt).
-
-## Integrations
-
-### Dialog / picker plugins
-
-The built-in mechanism for choosing items (e.g. `:ArduinoChooseBoard`) uses
-`inputlist()` and is not very pretty or ergonomic. If you would like to improve
-the UI, there are two approaches:
-
-- **Neovim:** override `vim.ui.select` (e.g. by using a plugin like [dressing.nvim](https://github.com/stevearc/dressing.nvim))
-- **Vim8:** install [ctrlp](https://github.com/ctrlpvim/ctrlp.vim) or [fzf](https://github.com/junegunn/fzf.vim). They will automatically be detected and used
-
-### Tmux / screen
-
-If you want to run the arduino commands in a separate tmux or screen pane, use
-[vim-slime](https://github.com/jpalardy/vim-slime). By setting `let g:arduino_use_slime = 1` vim-arduino will send the commands via `slime#send()` instead of running them inside a vim terminal.
-
-### Status Line
-
-You may want to display the arduino state in your status line. There are four
-pieces of data you may find interesting:
-
-- **g:arduino_board** - the currently selected board
-- **g:arduino_programmer** - the currently selected programmer
-- **g:arduino_serial_baud** - the baud rate that will be used for Serial commands
-- **arduino#GetPort()** - returns the port that will be used for communication
-
-An example with vanilla vim or nvim, added to `ftplugin/arduino.vim`:
-
-```vim
-" my_file.ino [arduino:avr:uno] [arduino:usbtinyisp] (/dev/ttyACM0:9600)
-function! ArduinoStatusLine()
-  let port = arduino#GetPort()
-  let line = '[' . g:arduino_board . '] [' . g:arduino_programmer . ']'
-  if !empty(port)
-    let line = line . ' (' . port . ':' . g:arduino_serial_baud . ')'
-  endif
-  return line
-endfunction
-augroup ArduinoStatusLine
-  autocmd! * <buffer>
-  autocmd BufWinEnter <buffer> setlocal stl=%f\ %h%w%m%r\ %{ArduinoStatusLine()}\ %=\ %(%l,%c%V\ %=\ %P%)
-augroup END
-```
-
-To do the same thing with [vim-airline](https://github.com/vim-airline/vim-airline):
-
-```vim
-autocmd BufNewFile,BufRead *.ino let g:airline_section_x='%{MyStatusLine()}'
-```
-
-For [lualine](https://github.com/nvim-lualine/lualine.nvim) (Neovim only) I use
-the following function:
+You can access plugin status via global variables or utility functions.
+For `lualine.nvim`:
 
 ```lua
 local function arduino_status()
-  if vim.bo.filetype ~= "arduino" then
-    return ""
-  end
-  local port = vim.fn["arduino#GetPort"]()
-  local line = string.format("[%s]", vim.g.arduino_board)
-  if vim.g.arduino_programmer ~= "" then
-    line = line .. string.format(" [%s]", vim.g.arduino_programmer)
-  end
-  if port ~= 0 then
-    line = line .. string.format(" (%s:%s)", port, vim.g.arduino_serial_baud)
-  end
-  return line
+  if vim.bo.filetype ~= "arduino" then return "" end
+  
+  -- Use the internal config or globals
+  local config = require('arduino.config')
+  local board = config.options.board or "Unknown"
+  local port = require('arduino.cli').get_port() or "No Port"
+  
+  return string.format(" [%s] (%s)", board, port)
 end
+
+require('lualine').setup {
+  sections = {
+    lualine_x = { arduino_status, 'encoding', 'fileformat', 'filetype' },
+  }
+}
 ```
 
 ## License
 
-Everything is under the [MIT
-License](https://github.com/stevearc/vim-arduino/blob/master/LICENSE) except for
-the wonderful syntax file, which was created by Johannes Hoff and copied from
-[vim.org](http://www.vim.org/scripts/script.php?script_id=2654) and is under the
-[Vim License](http://vimdoc.sourceforge.net/htmldoc/uganda.html).
+Everything is under the [MIT License](https://github.com/lindmeira/vim-arduino/blob/master/LICENSE) except for the syntax file, which is under the [Vim License](http://vimdoc.sourceforge.net/htmldoc/uganda.html).
