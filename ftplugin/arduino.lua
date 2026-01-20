@@ -32,3 +32,14 @@ if config.options.auto_baud then
     end,
   })
 end
+
+-- Check for LSP attachment
+local bufnr = vim.api.nvim_get_current_buf()
+vim.defer_fn(function()
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    local clients = vim.lsp.get_clients({ bufnr = bufnr, name = 'arduino_language_server' })
+    if #clients == 0 then
+      vim.notify('Arduino LSP failed to attach.', vim.log.levels.WARN, { title = 'Arduino' })
+    end
+  end
+end, 1000)

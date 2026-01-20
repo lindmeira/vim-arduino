@@ -9,8 +9,25 @@ local M = {}
 function M.setup(opts)
   config.setup(opts)
 
+  local function check_deps()
+    if vim.fn.executable 'arduino-cli' ~= 1 then
+      vim.notify_once('Application arduino-cli not found.', vim.log.levels.WARN, { title = 'Arduino' })
+    end
+  end
+
+  -- Simple deferred check to allow UI plugins to initialize
+  if vim.v.vim_did_enter == 1 then
+    vim.defer_fn(check_deps, 200)
+  else
+    vim.api.nvim_create_autocmd('VimEnter', {
+      callback = function()
+        vim.defer_fn(check_deps, 200)
+      end,
+      once = true,
+    })
+  end
+
   -- Auto-detect board from sketch config
-  local util = require 'arduino.util'
   local cpu = util.get_sketch_config()
   if cpu and cpu.fqbn then
     config.options.board = cpu.fqbn
