@@ -3,8 +3,8 @@ if vim.g.loaded_arduino then
 end
 vim.g.loaded_arduino = 1
 
-local arduino = require('arduino')
-local config = require('arduino.config')
+local arduino = require 'arduino'
+local config = require 'arduino.config'
 
 -- Setup with defaults if not already done by user in init.lua
 if not config.is_setup then
@@ -12,7 +12,7 @@ if not config.is_setup then
 end
 
 vim.api.nvim_create_user_command('ArduinoAttach', function(opts)
-  arduino.attach(opts.args ~= "" and opts.args or nil)
+  arduino.attach(opts.args ~= '' and opts.args or nil)
 end, { nargs = '?' })
 
 vim.api.nvim_create_user_command('ArduinoChooseBoard', function()
