@@ -107,26 +107,22 @@ map('n', '<leader>ap', '<cmd>ArduinoChoosePort<CR>', { desc = "Choose Port" })
 
 ## Status Line / Lualine
 
-You can access plugin status via global variables or utility functions.
-For `lualine.nvim`:
+### Automatic Lualine Integration
+If you use [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim), this plugin **automatically** injects a status component into your statusline for Arduino files. It will appear in your `lualine_x` section (usually the right side) as `[Board] (Port)`. No manual configuration is required.
+
+### Manual Integration
+If you use a different statusline or want to customize the component, you can use the provided status function:
 
 ```lua
-local function arduino_status()
-  if vim.bo.filetype ~= "arduino" then return "" end
-  
-  -- Use the internal config or globals
-  local config = require('arduino.config')
-  local board = config.options.board or "Unknown"
-  local port = require('arduino.cli').get_port() or "No Port"
-  
-  return string.format(" [%s] (%s)", board, port)
-end
+-- Returns a string like "[arduino:avr:uno] (/dev/ttyUSB0)"
+local status = require('arduino.status').string()
+```
 
-require('lualine').setup {
-  sections = {
-    lualine_x = { arduino_status, 'encoding', 'fileformat', 'filetype' },
-  }
-}
+Example for a custom statusline:
+```lua
+function MyStatusLine()
+  return require('arduino.status').string()
+end
 ```
 
 ## License
