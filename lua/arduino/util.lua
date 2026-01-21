@@ -278,8 +278,8 @@ function M.detect_baud_rate(lines)
     end
   end
 
-  -- No valid Serial.begin() found, return default
-  return config.options.serial_baud or 9600
+  -- No valid Serial.begin() found, return the configured default
+  return config.options.original_baud or 9600
 end
 
 --- Format bytes to human readable string

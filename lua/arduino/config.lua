@@ -45,6 +45,9 @@ function M.setup(opts)
   -- Merge defaults, globals, and passed opts
   M.options = vim.tbl_deep_extend('force', M.defaults, globals, opts)
 
+  -- Preserve the configured baud rate as a fallback for auto_baud
+  M.options.original_baud = M.options.serial_baud
+
   -- Detect arduino-cli if use_cli is null/nil (though we defaulted to true above, let's be smart)
   if M.options.use_cli == nil then
     M.options.use_cli = vim.fn.executable 'arduino-cli' == 1

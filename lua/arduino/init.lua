@@ -179,9 +179,9 @@ function M.attach(port)
             end
           end
 
-          util.notify('Arduino attached to ' .. (config.options.board or 'unknown'))
+          util.notify('Sketch attached to ' .. (config.options.board or 'unknown'))
         else
-          util.notify('Failed to attach', vim.log.levels.ERROR)
+          util.notify('Failed to attach sketch.', vim.log.levels.ERROR)
         end
       end,
     })
@@ -192,7 +192,7 @@ function M.attach(port)
   else
     local ports = cli.get_ports(true)
     if #ports == 0 then
-      util.notify('No serial ports found', vim.log.levels.WARN)
+      util.notify('No serial ports found.', vim.log.levels.WARN)
     elseif #ports == 1 then
       perform_attach(ports[1])
     else
