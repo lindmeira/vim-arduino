@@ -355,16 +355,48 @@ function M.get_info()
   print(table.concat(info, '\n'))
 end
 
-function M.set_baud(baud)
-  if not config.VALID_BAUD_RATES[baud] then
+function M.set_baud(baud, is_auto)
+  if baud == nil or baud == '' then
+    local items = {
+      { label = 'Auto (Detect from code)', value = 'auto' },
+    }
+    local rates = {}
+    for r, _ in pairs(config.VALID_BAUD_RATES) do
+      table.insert(rates, r)
+    end
+    table.sort(rates)
+    for _, r in ipairs(rates) do
+      table.insert(items, { label = tostring(r), value = r })
+    end
+    select_item(items, 'Select Baud Rate', M.set_baud)
+    return
+  end
+
+  if baud == 'auto' then
+    config.options.manual_baud = false
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local detected = util.detect_baud_rate(lines)
+    M.set_baud(detected, true)
+    util.notify('Baud rate reset to Auto mode')
+    return
+  end
+
+  local b = tonumber(baud)
+  if not b or not config.VALID_BAUD_RATES[b] then
     util.notify('Invalid baud rate: ' .. (baud or 'nil'), vim.log.levels.ERROR)
     return
   end
-  if config.options.serial_baud == baud then
+
+  if not is_auto then
+    config.options.manual_baud = true
+  end
+
+  if config.options.serial_baud == b then
     return
   end
-  config.options.serial_baud = baud
-  util.notify('Baud rate set to ' .. baud)
+  config.options.serial_baud = b
+  local prefix = is_auto and 'Baud rate set to ' or 'Baud rate manually set to '
+  util.notify(prefix .. b)
 end
 
 return M

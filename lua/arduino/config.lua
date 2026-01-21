@@ -37,6 +37,7 @@ M.defaults = {
   use_cli = true,
   hardware_dirs = {},
   use_telescope = true,
+  manual_baud = false,
 }
 
 M.options = {}

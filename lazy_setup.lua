@@ -23,6 +23,7 @@ return {
     { '<leader>ai', '<cmd>ArduinoInfo<cr>', desc = 'Current Settings' },
     { '<leader>al', '<cmd>ArduinoCheckLogs<cr>', desc = 'Check Logs' },
     { '<leader>ap', '<cmd>ArduinoChoosePort<cr>', desc = 'Select Port' },
+    { '<leader>ar', '<cmd>ArduinoSetBaud<cr>', desc = 'Baud Rate' },
     { '<leader>as', '<cmd>ArduinoSerial<cr>', desc = 'Serial Monitor' },
     { '<leader>at', '<cmd>ArduinoChooseProgrammer<cr>', desc = 'Select Programmer' },
     { '<leader>au', '<cmd>ArduinoUploadAndSerial<cr>', desc = 'Flash and Monitor' },

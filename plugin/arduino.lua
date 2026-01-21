@@ -56,5 +56,5 @@ vim.api.nvim_create_user_command('ArduinoChoosePort', function()
 end, {})
 
 vim.api.nvim_create_user_command('ArduinoSetBaud', function(opts)
-  arduino.set_baud(tonumber(opts.args))
-end, { nargs = 1 })
+  arduino.set_baud(opts.args ~= '' and opts.args or nil)
+end, { nargs = '?' })

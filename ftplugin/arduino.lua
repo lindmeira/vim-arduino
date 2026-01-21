@@ -24,19 +24,22 @@ vim.bo.cindent = true
 vim.bo.makeprg = cli.get_compile_command()
 
 if config.options.auto_baud then
+  local function sync_baud()
+    if config.options.manual_baud then
+      return
+    end
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local detected_baud = require('arduino.util').detect_baud_rate(lines)
+    require('arduino').set_baud(detected_baud, true)
+  end
+
   -- Trigger detection immediately for current buffer
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local detected_baud = require('arduino.util').detect_baud_rate(lines)
-  vim.cmd('ArduinoSetBaud ' .. detected_baud)
+  sync_baud()
 
   -- Also set up autocmd for future writes
   vim.api.nvim_create_autocmd({ 'BufWritePost' }, {
     buffer = 0,
-    callback = function()
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      local detected_baud = require('arduino.util').detect_baud_rate(lines)
-      vim.cmd('ArduinoSetBaud ' .. detected_baud)
-    end,
+    callback = sync_baud,
   })
 end
 
