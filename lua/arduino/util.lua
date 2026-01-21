@@ -102,7 +102,18 @@ function M.write_json(path, data)
 end
 
 function M.notify(msg, level)
-  vim.notify(msg, level or vim.log.levels.INFO, { title = 'Arduino' })
+  if vim.v.vim_did_enter == 0 then
+    vim.api.nvim_create_autocmd('VimEnter', {
+      callback = function()
+        vim.defer_fn(function()
+          vim.notify(msg, level or vim.log.levels.INFO, { title = 'Arduino' })
+        end, 200)
+      end,
+      once = true,
+    })
+  else
+    vim.notify(msg, level or vim.log.levels.INFO, { title = 'Arduino' })
+  end
 end
 
 function M.find_sketch_config(dir)
@@ -230,25 +241,6 @@ function M.restart_lsp()
   end
 end
 
---- Valid Arduino baud rates
-M.VALID_BAUD_RATES = {
-  [2400] = true,
-  [4800] = true,
-  [9600] = true,
-  [14400] = true,
-  [19200] = true,
-  [28800] = true,
-  [38400] = true,
-  [57600] = true,
-  [76800] = true,
-  [115200] = true,
-  [230400] = true,
-  [250000] = true,
-  [500000] = true,
-  [1000000] = true,
-  [2000000] = true,
-}
-
 --- Remove C/C++/Arduino style comments from a line
 ---@param line string: The line to clean
 ---@return string: Line with comments removed
@@ -272,7 +264,7 @@ function M.detect_baud_rate(lines)
     local baud_str = clean_line:match 'Serial[0-9]*%.begin%s*%(%s*(%d+)%s*%)'
     if baud_str then
       local baud = tonumber(baud_str)
-      if baud and M.VALID_BAUD_RATES[baud] then
+      if baud and config.VALID_BAUD_RATES[baud] then
         return baud
       end
       -- Found a Serial.begin but the baud rate is invalid
