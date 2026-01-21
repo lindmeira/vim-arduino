@@ -22,12 +22,13 @@ function M.run_silent(cmd, title, callback)
     end,
     on_exit = function(_, code)
       if code == 0 then
-        util.notify(title .. ' successful', vim.log.levels.INFO)
+        util.notify(title .. ' successful.', vim.log.levels.INFO)
+        util.parse_and_notify_memory_usage()
         if callback then
           vim.schedule(callback)
         end
       else
-        util.notify(title .. ' failed. Check logs with :ArduinoCheckLogs', vim.log.levels.ERROR)
+        util.notify(title .. ' failed. Check logs with :ArduinoCheckLogs.', vim.log.levels.ERROR)
       end
     end,
   })

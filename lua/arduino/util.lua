@@ -282,4 +282,54 @@ function M.detect_baud_rate(lines)
   return config.options.serial_baud or 9600
 end
 
+--- Format bytes to human readable string
+---@param b number|string: Bytes
+---@return string: Formatted string
+local function format_bytes(b)
+  b = tonumber(b)
+  if not b then
+    return '0B'
+  end
+  if b >= 1048576 then
+    return string.format('%.1fMB', b / 1048576)
+  elseif b >= 1024 then
+    return string.format('%.1fKB', b / 1024)
+  end
+  return b .. 'B'
+end
+
+--- Parse memory usage from logs and notify user
+function M.parse_and_notify_memory_usage()
+  local log_data = require('arduino.log').get()
+  local flash_used, flash_perc, flash_max
+  local ram_used, ram_perc, ram_max
+
+  for _, line in ipairs(log_data) do
+    -- Program storage (Flash)
+    local f_used, f_perc, f_max = line:match 'Sketch uses (%d+) bytes %((%d+)%%%).-Maximum is (%d+) bytes'
+    if f_used then
+      flash_used, flash_perc, flash_max = f_used, f_perc, f_max
+    end
+
+    -- Dynamic memory (RAM)
+    local r_used, r_perc, r_max = line:match 'Global variables use (%d+) bytes %((%d+)%%%).-Maximum is (%d+) bytes'
+    if r_used then
+      ram_used, ram_perc, ram_max = r_used, r_perc, r_max
+    end
+  end
+
+  if flash_used and ram_used then
+    local msg = string.format(
+      'Flash: %s%% (%s/%s), RAM: %s%% (%s/%s).',
+      flash_perc,
+      format_bytes(flash_used),
+      format_bytes(flash_max),
+      ram_perc,
+      format_bytes(ram_used),
+      format_bytes(ram_max)
+    )
+    M.notify(msg)
+  end
+end
+
 return M
