@@ -2,7 +2,7 @@ return {
   'meira/vim-arduino',
   dependencies = {
     -- Optional: if you want a better UI for board/port selection
-    'nvim-telescope/telescope.nvim',
+    -- 'nvim-telescope/telescope.nvim',
   },
   ft = 'arduino',
   config = function()
@@ -11,6 +11,7 @@ return {
       use_cli = true, -- Use arduino-cli if available
       auto_baud = true,
       serial_baud = 57600,
+      use_telescope = false, -- Use Telescope for UI if available
       -- build_path = "{project_dir}/build",
     }
   end,

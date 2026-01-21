@@ -18,6 +18,7 @@ M.defaults = {
   },
   use_cli = true,
   hardware_dirs = {},
+  use_telescope = true,
 }
 
 M.options = {}

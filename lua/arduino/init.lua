@@ -86,7 +86,11 @@ end
 -- UI Helper
 local function select_item(items, prompt, callback)
   -- items: list of {label=..., value=...}
-  local telescope_avail, _ = pcall(require, 'telescope')
+  local telescope_avail = false
+  if config.options.use_telescope then
+    local ok, _ = pcall(require, 'telescope')
+    telescope_avail = ok
+  end
 
   if telescope_avail then
     local pickers = require 'telescope.pickers'
