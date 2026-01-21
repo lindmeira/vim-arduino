@@ -188,7 +188,7 @@ function M.update_sketch_config(key, value, dir)
         M.restart_lsp()
       end
     else
-      M.notify('Failed to update sketch.yaml', vim.log.levels.ERROR)
+      M.notify('Failed to update sketch.yaml.', vim.log.levels.ERROR)
     end
     return
   end
@@ -220,9 +220,9 @@ function M.ensure_sketch_config(dir)
     if f then
       f:write(default_yaml)
       f:close()
-      M.notify 'Created default sketch.yaml'
+      M.notify 'Created default sketch.yaml.'
     else
-      M.notify('Failed to create sketch.yaml', vim.log.levels.ERROR)
+      M.notify('Failed to create sketch.yaml.', vim.log.levels.ERROR)
     end
   end
 end
@@ -237,7 +237,7 @@ function M.restart_lsp()
       vim.cmd 'LspRestart arduino_language_server'
     end
   else
-    M.notify('LspRestart not available, please restart editor to apply LSP changes', vim.log.levels.WARN)
+    M.notify('LspRestart not available, please restart editor to apply LSP changes.', vim.log.levels.WARN)
   end
 end
 

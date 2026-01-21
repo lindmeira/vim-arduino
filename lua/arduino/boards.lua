@@ -109,7 +109,7 @@ function M.get_programmers()
   if config.options.use_cli then
     local board = config.options.board
     if not board then
-      util.notify('Please select a board first', vim.log.levels.WARN)
+      util.notify('Please select a board first.', vim.log.levels.WARN)
       return programmers
     end
     local cmd = 'arduino-cli board details -b ' .. board .. ' --list-programmers --format json'

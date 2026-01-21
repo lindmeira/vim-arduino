@@ -144,7 +144,7 @@ end
 function M.get_serial_command()
   local port = M.get_port()
   if not port then
-    util.notify('No serial port found', vim.log.levels.ERROR)
+    util.notify('No serial port found.', vim.log.levels.ERROR)
     return nil
   end
   local cmd = config.options.serial_cmd

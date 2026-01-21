@@ -147,7 +147,7 @@ end
 
 function M.attach(port)
   if not config.options.use_cli then
-    util.notify('ArduinoAttach requires arduino-cli', vim.log.levels.ERROR)
+    util.notify('ArduinoAttach requires arduino-cli.', vim.log.levels.ERROR)
     return
   end
 
@@ -253,7 +253,8 @@ function M.choose_programmer()
   local p_list = boards.get_programmers()
   select_item(p_list, 'Select Programmer', function(value)
     config.options.programmer = value
-    util.notify('Selected programmer: ' .. value)
+    local display_val = (value == nil or value == '') and 'None' or value
+    util.notify('Selected programmer: ' .. display_val)
     util.update_sketch_config('programmer', value)
   end)
 end
@@ -261,7 +262,7 @@ end
 function M.choose_port()
   local ports = cli.get_ports(true)
   if #ports == 0 then
-    util.notify('No serial ports found', vim.log.levels.WARN)
+    util.notify('No serial ports found.', vim.log.levels.WARN)
     return
   end
   local items = {}
@@ -303,7 +304,7 @@ end
 function M.check_logs()
   local log_data = require('arduino.log').get()
   if #log_data == 0 then
-    util.notify 'No logs available'
+    util.notify 'No logs available.'
     return
   end
 
@@ -377,7 +378,7 @@ function M.set_baud(baud, is_auto)
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local detected = util.detect_baud_rate(lines)
     M.set_baud(detected, true)
-    util.notify('Baud rate reset to Auto mode')
+    util.notify 'Baud rate reset to Auto mode.'
     return
   end
 
