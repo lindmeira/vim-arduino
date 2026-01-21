@@ -18,7 +18,7 @@ return {
   keys = {
     { '<leader>aa', '<cmd>ArduinoAttach<cr>', desc = 'Attach Board' },
     { '<leader>ab', '<cmd>ArduinoChooseBoard<cr>', desc = 'Select Board' },
-    { '<leader>ac', '<cmd>ArduinoVerify<cr>', desc = 'Verify/Compile' },
+    { '<leader>ac', '<cmd>ArduinoVerify<cr>', desc = 'Compile/Verify' },
     { '<leader>af', '<cmd>ArduinoUpload<cr>', desc = 'Flash Firmware' },
     { '<leader>ai', '<cmd>ArduinoInfo<cr>', desc = 'Current Settings' },
     { '<leader>al', '<cmd>ArduinoCheckLogs<cr>', desc = 'Check Logs' },
@@ -26,5 +26,6 @@ return {
     { '<leader>as', '<cmd>ArduinoSerial<cr>', desc = 'Serial Monitor' },
     { '<leader>at', '<cmd>ArduinoChooseProgrammer<cr>', desc = 'Select Programmer' },
     { '<leader>au', '<cmd>ArduinoUploadAndSerial<cr>', desc = 'Flash and Monitor' },
+    { '<leader>av', '<cmd>ArduinoVerify<cr>', desc = 'which_key_ignore' },
   },
 }

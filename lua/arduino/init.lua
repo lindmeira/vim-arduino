@@ -278,12 +278,12 @@ end
 
 function M.verify()
   local cmd = cli.get_compile_command()
-  term.run_silent(cmd, 'Verification')
+  term.run_silent(cmd, 'Compilation')
 end
 
 function M.upload()
   local cmd = cli.get_upload_command()
-  term.run_silent(cmd, 'Upload')
+  term.run_silent(cmd, 'Flashing')
 end
 
 function M.serial()
@@ -295,7 +295,7 @@ end
 
 function M.upload_and_serial()
   local upload_cmd = cli.get_upload_command()
-  term.run_silent(upload_cmd, 'Upload', function()
+  term.run_silent(upload_cmd, 'Flashing', function()
     M.serial()
   end)
 end
