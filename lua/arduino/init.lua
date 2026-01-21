@@ -356,8 +356,11 @@ function M.get_info()
 end
 
 function M.set_baud(baud)
+  if config.options.serial_baud == baud then
+    return
+  end
   config.options.serial_baud = baud
-  print('Baud rate set to ' .. baud)
+  util.notify('Baud rate set to ' .. baud)
 end
 
 return M
