@@ -279,7 +279,7 @@ function M.detect_baud_rate(lines)
   end
 
   -- No valid Serial.begin() found, return default
-  return 57600
+  return config.options.serial_baud or 9600
 end
 
 return M
