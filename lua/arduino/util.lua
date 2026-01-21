@@ -73,13 +73,13 @@ function M.read_yaml_simple(path)
         value = value:sub(2, -2)
       end
 
-    if key == 'fqbn' or key == 'default_fqbn' then
-      cpu.fqbn = value
-    elseif key == 'port' or key == 'default_port' then
-      cpu.port = value
-    elseif key == 'programmer' or key == 'default_programmer' then
-      cpu.programmer = value
-    end
+      if key == 'fqbn' or key == 'default_fqbn' then
+        cpu.fqbn = value
+      elseif key == 'port' or key == 'default_port' then
+        cpu.port = value
+      elseif key == 'programmer' or key == 'default_programmer' then
+        cpu.programmer = value
+      end
     end
   end
   return data
@@ -232,10 +232,34 @@ end
 
 --- Valid Arduino baud rates
 local VALID_BAUD_RATES = {
-  [2400] = true, [4800] = true, [9600] = true, [14400] = true, [19200] = true,
-  [28800] = true, [38400] = true, [57600] = true, [76800] = true, [115200] = true,
-  [230400] = true, [250000] = true, [500000] = true, [1000000] = true, [2000000] = true
+  [2400] = true,
+  [4800] = true,
+  [9600] = true,
+  [14400] = true,
+  [19200] = true,
+  [28800] = true,
+  [38400] = true,
+  [57600] = true,
+  [76800] = true,
+  [115200] = true,
+  [230400] = true,
+  [250000] = true,
+  [500000] = true,
+  [1000000] = true,
+  [2000000] = true,
 }
+
+--- Remove C/C++/Arduino style comments from a line
+---@param line string: The line to clean
+---@return string: Line with comments removed
+local function strip_comments(line)
+  -- Remove /* */ block comments (handles multi-line blocks on single lines)
+  line = line:gsub('/%*.-%*/', '')
+  -- Remove // line comments
+  line = line:gsub('//.*', '')
+  -- Trim whitespace
+  return line:match '^%s*(.-)%s*$' or line
+end
 
 --- Detect baud rate from Arduino sketch content
 ---@param lines table: Array of buffer lines to analyze
@@ -243,7 +267,9 @@ local VALID_BAUD_RATES = {
 function M.detect_baud_rate(lines)
   -- Look for Serial.begin() calls and return the first valid match
   for _, line in ipairs(lines) do
-    local baud = line:match('Serial[0-9]*%.begin%s*%(%s*(%d+)%s*%)')
+    -- Strip comments before pattern matching to avoid false positives
+    local clean_line = strip_comments(line)
+    local baud = clean_line:match 'Serial[0-9]*%.begin%s*%(%s*(%d+)%s*%)'
     if baud then
       baud = tonumber(baud)
       if baud and VALID_BAUD_RATES[baud] then
