@@ -10,7 +10,7 @@ return {
       -- Default configuration (can be omitted)
       use_cli = true, -- Use arduino-cli if available
       auto_baud = true,
-      serial_baud = 9600,
+      serial_baud = 57600,
       -- build_path = "{project_dir}/build",
     }
   end,
