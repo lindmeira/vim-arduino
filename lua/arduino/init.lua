@@ -318,6 +318,12 @@ function M.serial()
   }
 
   local win = vim.api.nvim_open_win(buf, true, win_opts)
+  -- Apply Telescope highlights to match the theme (specifically the prompt/picker style)
+  vim.api.nvim_win_set_option(
+    win,
+    'winhl',
+    'Normal:TelescopePromptNormal,FloatBorder:TelescopePromptBorder,FloatTitle:TelescopePromptTitle'
+  )
 
   -- Track if we are intentionally killing the monitor to suppress exit code warnings
   local killing_monitor = false
@@ -392,6 +398,12 @@ function M.check_logs()
   }
 
   local win = vim.api.nvim_open_win(buf, true, win_opts)
+  -- Apply Telescope highlights to match the theme (specifically the prompt/picker style)
+  vim.api.nvim_win_set_option(
+    win,
+    'winhl',
+    'Normal:TelescopePromptNormal,FloatBorder:TelescopePromptBorder,FloatTitle:TelescopePromptTitle'
+  )
 
   -- Enable ANSI colors using terminal channel
   local chan = vim.api.nvim_open_term(buf, {})
