@@ -288,10 +288,51 @@ function M.upload()
 end
 
 function M.serial()
-  local cmd = cli.get_serial_command()
-  if cmd then
-    term.run(cmd)
+  local port = cli.get_port()
+  if not port then
+    util.notify('No serial port found.', vim.log.levels.WARN)
+    return
   end
+
+  local cmd = cli.get_serial_command()
+  if not cmd then
+    return
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  local width = math.ceil(vim.o.columns * 0.8)
+  local height = math.ceil(vim.o.lines * 0.8)
+  local row = math.floor((vim.o.lines - height) / 2) - 1
+  local col = math.ceil((vim.o.columns - width) / 2)
+
+  local win_opts = {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = 'minimal',
+    border = 'rounded',
+    title = ' Serial Monitor ',
+    title_pos = 'center',
+  }
+
+  local win = vim.api.nvim_open_win(buf, true, win_opts)
+
+  vim.fn.termopen(cmd, {
+    on_exit = function(_, code)
+      if code ~= 0 then
+        util.notify('Serial monitor exited with code ' .. code, vim.log.levels.WARN)
+      end
+    end,
+  })
+
+  vim.cmd 'startinsert'
+
+  -- Keymaps for closing
+  local opts = { buffer = buf, silent = true }
+  vim.keymap.set('t', '<Esc>', '<C-\\><C-n><cmd>close<cr>', opts)
+  vim.keymap.set('n', 'q', '<cmd>close<cr>', opts)
 end
 
 function M.upload_and_serial()

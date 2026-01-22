@@ -13,6 +13,8 @@ return {
       serial_baud = 57600,
       use_telescope = false, -- Use Telescope for UI if available
       -- build_path = "{project_dir}/build",
+      -- Override the default 'screen' command
+      -- serial_cmd = 'arduino-cli monitor -p {port} --config baudrate={baud}',
     }
   end,
   keys = {
