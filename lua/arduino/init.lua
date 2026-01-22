@@ -409,11 +409,11 @@ end
 function M.get_info()
   local info = {}
   table.insert(info, 'Board: ' .. (config.options.board or 'None'))
-  table.insert(info, 'Programmer: ' .. (config.options.programmer or 'None'))
   table.insert(info, 'Port: ' .. (cli.get_port() or 'None'))
   table.insert(info, 'Baud: ' .. config.options.serial_baud)
+  table.insert(info, 'Programmer: ' .. (config.options.programmer or 'None'))
   if config.options.use_cli then
-    table.insert(info, 'Verify Cmd: ' .. cli.get_compile_command())
+    table.insert(info, 'Compilation: ' .. cli.get_compile_command())
   end
   print(table.concat(info, '\n'))
 end
