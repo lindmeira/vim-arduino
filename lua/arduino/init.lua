@@ -6,8 +6,50 @@ local term = require 'arduino.term'
 
 local M = {}
 
+local function define_highlights()
+  local style = config.options.floating_window and config.options.floating_window.style or 'telescope'
+
+  if style == 'lualine' then
+    local lua_hl = vim.api.nvim_get_hl(0, { name = 'lualine_c_normal', link = false })
+    if vim.tbl_isempty(lua_hl) then
+      lua_hl = vim.api.nvim_get_hl(0, { name = 'NormalFloat', link = false })
+    end
+    local bg = lua_hl.bg
+
+    -- Helper to clone a highlight group but override background
+    local function clone_hl(target, source_name, new_bg)
+      local source = vim.api.nvim_get_hl(0, { name = source_name, link = false })
+      if vim.tbl_isempty(source) then
+        -- Fallback to standard float groups if telescope ones aren't defined
+        local fallback_name = source_name:gsub('TelescopePrompt', 'Float'):gsub('Telescope', 'Float')
+        source = vim.api.nvim_get_hl(0, { name = fallback_name, link = false })
+      end
+
+      local def = vim.deepcopy(source)
+      def.bg = new_bg
+      -- Clear any link just in case, though link=false should handle it
+      def.link = nil
+      vim.api.nvim_set_hl(0, target, def)
+    end
+
+    clone_hl('ArduinoWindowNormal', 'TelescopePromptNormal', bg)
+    clone_hl('ArduinoWindowBorder', 'TelescopePromptBorder', bg)
+    clone_hl('ArduinoWindowTitle', 'TelescopePromptTitle', bg)
+  else
+    -- Telescope (Default)
+    vim.api.nvim_set_hl(0, 'ArduinoWindowNormal', { link = 'TelescopePromptNormal' })
+    vim.api.nvim_set_hl(0, 'ArduinoWindowBorder', { link = 'TelescopePromptBorder' })
+    vim.api.nvim_set_hl(0, 'ArduinoWindowTitle', { link = 'TelescopePromptTitle' })
+  end
+end
+
 function M.setup(opts)
   config.setup(opts)
+
+  define_highlights()
+  vim.api.nvim_create_autocmd('ColorScheme', {
+    callback = define_highlights,
+  })
 
   local function check_deps()
     if vim.fn.executable 'arduino-cli' ~= 1 then
@@ -318,12 +360,8 @@ function M.serial()
   }
 
   local win = vim.api.nvim_open_win(buf, true, win_opts)
-  -- Apply Telescope highlights to match the theme (specifically the prompt/picker style)
-  vim.api.nvim_win_set_option(
-    win,
-    'winhl',
-    'Normal:TelescopePromptNormal,FloatBorder:TelescopePromptBorder,FloatTitle:TelescopePromptTitle'
-  )
+  -- Apply custom highlights (defaults to TelescopePrompt*)
+  vim.api.nvim_win_set_option(win, 'winhl', 'Normal:ArduinoWindowNormal,FloatBorder:ArduinoWindowBorder,FloatTitle:ArduinoWindowTitle')
 
   -- Track if we are intentionally killing the monitor to suppress exit code warnings
   local killing_monitor = false
@@ -398,12 +436,8 @@ function M.check_logs()
   }
 
   local win = vim.api.nvim_open_win(buf, true, win_opts)
-  -- Apply Telescope highlights to match the theme (specifically the prompt/picker style)
-  vim.api.nvim_win_set_option(
-    win,
-    'winhl',
-    'Normal:TelescopePromptNormal,FloatBorder:TelescopePromptBorder,FloatTitle:TelescopePromptTitle'
-  )
+  -- Apply custom highlights (defaults to TelescopePrompt*)
+  vim.api.nvim_win_set_option(win, 'winhl', 'Normal:ArduinoWindowNormal,FloatBorder:ArduinoWindowBorder,FloatTitle:ArduinoWindowTitle')
 
   -- Enable ANSI colors using terminal channel
   local chan = vim.api.nvim_open_term(buf, {})

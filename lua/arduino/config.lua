@@ -38,6 +38,9 @@ M.defaults = {
   hardware_dirs = {},
   use_telescope = true,
   manual_baud = false,
+  floating_window = {
+    style = 'telescope',
+  },
 }
 
 M.options = {}
