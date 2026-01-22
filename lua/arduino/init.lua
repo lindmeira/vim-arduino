@@ -319,15 +319,38 @@ function M.serial()
 
   local win = vim.api.nvim_open_win(buf, true, win_opts)
 
-  vim.fn.termopen(cmd, {
+  -- Track if we are intentionally killing the monitor to suppress exit code warnings
+  local killing_monitor = false
+
+  local job_id = vim.fn.termopen(cmd, {
     on_exit = function(_, code)
-      if code ~= 0 then
+      if code ~= 0 and not killing_monitor then
         util.notify('Serial monitor exited with code ' .. code, vim.log.levels.WARN)
       end
     end,
   })
 
   vim.cmd 'startinsert'
+
+  -- Ensure process is killed when buffer/window is closed
+  vim.api.nvim_create_autocmd({ 'BufUnload', 'WinClosed' }, {
+    buffer = buf,
+    callback = function()
+      if job_id then
+        killing_monitor = true
+        -- If using screen, send kill sequences to prevent detaching
+        if cmd:match '^screen' then
+          -- Send Standard Quit: Ctrl-A, \, y
+          vim.api.nvim_chan_send(job_id, '\001\\y')
+          -- Send Standard Kill: Ctrl-A, k, y
+          vim.api.nvim_chan_send(job_id, '\001ky')
+          -- Send User Requested: Ctrl-A, q
+          vim.api.nvim_chan_send(job_id, '\001q')
+        end
+        pcall(vim.fn.jobstop, job_id)
+      end
+    end,
+  })
 
   -- Keymaps for closing
   local opts = { buffer = buf, silent = true }
