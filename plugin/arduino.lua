@@ -43,10 +43,6 @@ vim.api.nvim_create_user_command('ArduinoCheckLogs', function()
   arduino.check_logs()
 end, {})
 
-vim.api.nvim_create_user_command('ArduinoGetInfo', function()
-  arduino.get_info()
-end, {})
-
 vim.api.nvim_create_user_command('ArduinoInfo', function()
   arduino.get_info()
 end, {})
