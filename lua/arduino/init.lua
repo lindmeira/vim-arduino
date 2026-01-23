@@ -525,186 +525,200 @@ function M.library_manager()
 
   util.notify('Loading library data...', vim.log.levels.INFO)
 
-  -- Chain async calls: Search -> List Installed -> List Outdated
-  lib.search(function(search_data)
-    if not search_data or not search_data.libraries then
-      util.notify('Failed to load libraries.', vim.log.levels.ERROR)
-      return
-    end
-
-    lib.list_installed(function(installed_data)
-      local installed_map = {}
-      if installed_data and installed_data.installed_libraries then
-        for _, l in ipairs(installed_data.installed_libraries) do
-          if l.library and l.library.name then
-            installed_map[l.library.name] = l.library.version
-          end
-        end
+  local function fetch_data(callback)
+    lib.search(function(search_data)
+      if not search_data or not search_data.libraries then
+        util.notify('Failed to load libraries.', vim.log.levels.ERROR)
+        callback(nil)
+        return
       end
 
-      lib.list_outdated(function(outdated_data)
-        local outdated_map = {}
-        if outdated_data and outdated_data.libraries then
-          for _, l in ipairs(outdated_data.libraries) do
+      lib.list_installed(function(installed_data)
+        local installed_map = {}
+        if installed_data and installed_data.installed_libraries then
+          for _, l in ipairs(installed_data.installed_libraries) do
             if l.library and l.library.name then
-              outdated_map[l.library.name] = l.release and l.release.version or 'unknown'
+              installed_map[l.library.name] = l.library.version
             end
           end
         end
 
-        local results = {}
-        for _, item in ipairs(search_data.libraries) do
-          local name = item.name
-          local status_icon = ''
-          local version_info = ''
-          local ordinal_prefix = 'z'
-
-          if installed_map[name] then
-            status_icon = '✓'
-            version_info = ' [' .. installed_map[name] .. ']'
-            ordinal_prefix = 'm' -- Installed
-          end
-
-          if outdated_map[name] then
-            status_icon = '↑'
-            version_info = ' [Update: ' .. outdated_map[name] .. ']'
-            ordinal_prefix = 'a' -- Outdated (top priority)
-          end
-
-          if name then
-            table.insert(results, {
-              name = name,
-              status_icon = status_icon,
-              version_info = version_info,
-              installed = installed_map[name] ~= nil,
-              outdated = outdated_map[name] ~= nil,
-              ordinal = ordinal_prefix .. ' ' .. name,
-            })
-          end
-        end
-
-        local pickers = require 'telescope.pickers'
-        local finders = require 'telescope.finders'
-        local conf = require('telescope.config').values
-        local actions = require 'telescope.actions'
-        local action_state = require 'telescope.actions.state'
-        local entry_display = require 'telescope.pickers.entry_display'
-
-        local displayer = entry_display.create {
-          separator = ' ',
-          items = {
-            { width = 1 }, -- Icon
-            { remaining = true }, -- Name + Version
-          },
-        }
-
-        local function make_display(entry)
-          local icon_hl = entry.outdated and 'ArduinoLibraryOutdated' or (entry.installed and 'ArduinoLibraryInstalled' or 'Normal')
-          return displayer {
-            { entry.status_icon, icon_hl },
-            entry.name .. entry.version_info,
-          }
-        end
-
-        pickers
-          .new({}, {
-            prompt_title = 'Arduino Libraries',
-            finder = finders.new_table {
-              results = results,
-              entry_maker = function(entry)
-                return {
-                  value = entry,
-                  display = make_display,
-                  ordinal = entry.ordinal,
-                  name = entry.name,
-                  status_icon = entry.status_icon,
-                  version_info = entry.version_info,
-                  installed = entry.installed,
-                  outdated = entry.outdated,
-                }
-              end,
-            },
-            sorter = conf.generic_sorter {},
-            attach_mappings = function(prompt_bufnr, map)
-              local function perform_action(action_type, close_permanently)
-                actions.close(prompt_bufnr)
-                local selection = action_state.get_selected_entry()
-                if not selection then
-                  return
-                end
-                local entry = selection.value
-
-                -- Callback to reopen/refresh if not closing permanently
-                local cb = nil
-                if not close_permanently then
-                  cb = function()
-                    M.library_manager()
-                  end
-                end
-
-                if action_type == 'context' then
-                  if entry.outdated then
-                    lib.upgrade(entry.name, cb)
-                  elseif entry.installed then
-                    lib.uninstall(entry.name, cb)
-                  else
-                    lib.install(entry.name, cb)
-                  end
-                elseif action_type == 'install_update' then
-                  if entry.outdated then
-                    lib.upgrade(entry.name, cb)
-                  elseif not entry.installed then
-                    lib.install(entry.name, cb)
-                  else
-                    util.notify('Library ' .. entry.name .. ' is already installed/updated.', vim.log.levels.INFO)
-                    if cb then
-                      cb()
-                    end
-                  end
-                elseif action_type == 'update' then
-                  if entry.outdated then
-                    lib.upgrade(entry.name, cb)
-                  else
-                    util.notify('Library ' .. entry.name .. ' is not outdated.', vim.log.levels.WARN)
-                    if cb then
-                      cb()
-                    end
-                  end
-                elseif action_type == 'uninstall' then
-                  if entry.installed then
-                    lib.uninstall(entry.name, cb)
-                  else
-                    util.notify('Library ' .. entry.name .. ' is not installed.', vim.log.levels.WARN)
-                    if cb then
-                      cb()
-                    end
-                  end
-                end
+        lib.list_outdated(function(outdated_data)
+          local outdated_map = {}
+          if outdated_data and outdated_data.libraries then
+            for _, l in ipairs(outdated_data.libraries) do
+              if l.library and l.library.name then
+                outdated_map[l.library.name] = l.release and l.release.version or 'unknown'
               end
+            end
+          end
 
-              actions.select_default:replace(function()
-                perform_action('context', true)
-              end)
+          local results = {}
+          for _, item in ipairs(search_data.libraries) do
+            local name = item.name
+            local status_icon = ''
+            local version_info = ''
+            local ordinal_prefix = 'z'
 
-              map('i', '<C-i>', function()
-                perform_action('install_update', false)
-              end)
-              map('i', '<C-u>', function()
-                perform_action('update', false)
-              end)
-              map('i', '<C-d>', function()
-                perform_action('uninstall', false)
-              end)
-              map('i', '<C-r>', function()
-                perform_action('uninstall', false)
-              end)
+            if installed_map[name] then
+              status_icon = '✓'
+              version_info = ' [' .. installed_map[name] .. ']'
+              ordinal_prefix = 'm' -- Installed
+            end
 
-              return true
-            end,
-          })
-          :find()
+            if outdated_map[name] then
+              status_icon = '↑'
+              version_info = ' [Update: ' .. outdated_map[name] .. ']'
+              ordinal_prefix = 'a' -- Outdated (top priority)
+            end
+
+            if name then
+              table.insert(results, {
+                name = name,
+                status_icon = status_icon,
+                version_info = version_info,
+                installed = installed_map[name] ~= nil,
+                outdated = outdated_map[name] ~= nil,
+                ordinal = ordinal_prefix .. ' ' .. name,
+              })
+            end
+          end
+          callback(results)
+        end)
       end)
     end)
+  end
+
+  fetch_data(function(initial_results)
+    if not initial_results then
+      return
+    end
+
+    local pickers = require 'telescope.pickers'
+    local finders = require 'telescope.finders'
+    local conf = require('telescope.config').values
+    local actions = require 'telescope.actions'
+    local action_state = require 'telescope.actions.state'
+    local entry_display = require 'telescope.pickers.entry_display'
+
+    local displayer = entry_display.create {
+      separator = ' ',
+      items = {
+        { width = 1 }, -- Icon
+        { remaining = true }, -- Name + Version
+      },
+    }
+
+    local function make_display(entry)
+      local icon_hl = entry.outdated and 'ArduinoLibraryOutdated' or (entry.installed and 'ArduinoLibraryInstalled' or 'Normal')
+      return displayer {
+        { entry.status_icon, icon_hl },
+        entry.name .. entry.version_info,
+      }
+    end
+
+    local function create_finder(results)
+      return finders.new_table {
+        results = results,
+        entry_maker = function(entry)
+          return {
+            value = entry,
+            display = make_display,
+            ordinal = entry.ordinal,
+            name = entry.name,
+            status_icon = entry.status_icon,
+            version_info = entry.version_info,
+            installed = entry.installed,
+            outdated = entry.outdated,
+          }
+        end,
+      }
+    end
+
+    pickers
+      .new({}, {
+        prompt_title = 'Arduino Libraries',
+        finder = create_finder(initial_results),
+        sorter = conf.generic_sorter {},
+        attach_mappings = function(prompt_bufnr, map)
+          local function perform_action(action_type, close_permanently)
+            local selection = action_state.get_selected_entry()
+            if not selection then
+              return
+            end
+            local entry = selection.value
+
+            if close_permanently then
+              actions.close(prompt_bufnr)
+            end
+
+            local cb = nil
+            if not close_permanently then
+              cb = function()
+                fetch_data(function(new_results)
+                  if new_results then
+                    local current_picker = action_state.get_current_picker(prompt_bufnr)
+                    current_picker:refresh(create_finder(new_results), { reset_prompt = false })
+                  end
+                end)
+              end
+            end
+
+            if action_type == 'context' then
+              if entry.outdated then
+                lib.upgrade(entry.name, cb)
+              elseif entry.installed then
+                lib.uninstall(entry.name, cb)
+              else
+                lib.install(entry.name, cb)
+              end
+            elseif action_type == 'install_update' then
+              if entry.outdated then
+                lib.upgrade(entry.name, cb)
+              elseif not entry.installed then
+                lib.install(entry.name, cb)
+              else
+                util.notify('Library ' .. entry.name .. ' is already installed/updated.', vim.log.levels.INFO)
+                -- Even if no action taken, refresh/callback might be expected or just do nothing?
+                -- If we don't call cb(), the spinner/state won't update if we showed one.
+                -- But here we essentially just return.
+              end
+            elseif action_type == 'update' then
+              if entry.outdated then
+                lib.upgrade(entry.name, cb)
+              else
+                util.notify('Library ' .. entry.name .. ' is not outdated.', vim.log.levels.WARN)
+              end
+            elseif action_type == 'uninstall' then
+              if entry.installed then
+                lib.uninstall(entry.name, cb)
+              else
+                util.notify('Library ' .. entry.name .. ' is not installed.', vim.log.levels.WARN)
+              end
+            end
+          end
+
+          actions.select_default:replace(function()
+            perform_action('context', true)
+          end)
+
+          map('i', '<C-i>', function()
+            perform_action('install_update', false)
+          end)
+          map('i', '<C-u>', function()
+            perform_action('update', false)
+          end)
+          map('i', '<C-d>', function()
+            perform_action('uninstall', false)
+          end)
+          map('i', '<C-r>', function()
+            perform_action('uninstall', false)
+          end)
+
+          return true
+        end,
+      })
+      :find()
   end)
 end
 
