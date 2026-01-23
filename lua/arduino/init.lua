@@ -1,10 +1,10 @@
-local config = require 'arduino.config'
-local util = require 'arduino.util'
 local boards = require 'arduino.boards'
-local cli = require 'arduino.cli'
+local config = require 'arduino.config'
 local term = require 'arduino.term'
-local lib = require 'arduino.lib'
 local core = require 'arduino.core'
+local util = require 'arduino.util'
+local cli = require 'arduino.cli'
+local lib = require 'arduino.lib'
 
 local M = {}
 
@@ -881,10 +881,9 @@ function M.core_manager()
       local icon_hl = entry.outdated and 'ArduinoLibraryOutdated' or (entry.installed and 'ArduinoLibraryInstalled' or 'Normal')
       return displayer {
         { entry.status_icon, icon_hl },
-        entry.display_name .. entry.version_info,
+        entry.name .. entry.version_info,
       }
     end
-
     local function create_finder(results)
       return finders.new_table {
         results = results,
@@ -912,9 +911,9 @@ function M.core_manager()
         local e = entry.value
         local c = e.details
         local lines = {}
-        table.insert(lines, '# ' .. (e.display_name or 'Unknown'))
+        table.insert(lines, '# ' .. (e.name or 'Unknown'))
         table.insert(lines, '')
-        table.insert(lines, '**ID:** ' .. (e.name or 'Unknown'))
+        table.insert(lines, '**Name:** ' .. (e.display_name or 'Unknown'))
         table.insert(lines, '**Maintainer:** ' .. (c.maintainer or 'Unknown'))
         table.insert(lines, '**Website:** ' .. (c.website or '-'))
         table.insert(lines, '**Latest version:** ' .. (e.latest or '-'))
