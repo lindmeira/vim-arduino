@@ -646,6 +646,26 @@ function M.library_manager()
                   util.notify('Library ' .. entry.name .. ' is already installed.', vim.log.levels.INFO)
                 end
               end)
+
+              map('i', '<C-d>', function()
+                actions.close(prompt_bufnr)
+                local selection = action_state.get_selected_entry()
+                if not selection then
+                  return
+                end
+                local entry = selection.value
+
+                if entry.installed then
+                  lib.uninstall(entry.name, function()
+                    M.library_manager()
+                  end)
+                else
+                  util.notify('Library ' .. entry.name .. ' is not installed.', vim.log.levels.WARN)
+                  -- Reopen to keep flow
+                  M.library_manager()
+                end
+              end)
+
               return true
             end,
           })
