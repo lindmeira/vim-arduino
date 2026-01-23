@@ -628,6 +628,7 @@ function M.library_manager()
             value = entry,
             display = make_display,
             ordinal = entry.ordinal,
+            name = entry.name,
             status_icon = entry.status_icon,
             version_info = entry.version_info,
             installed = entry.installed,
