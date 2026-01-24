@@ -1093,71 +1093,75 @@ function M.library_manager_fallback()
   util.notify('Loading library data...', vim.log.levels.INFO)
   fetch_library_data(function(libraries)
     if not libraries then return end
-    vim.ui.input({ prompt = 'Filter libraries (type to search): ' }, function(input)
-      if input == nil then
-        util.notify('Library manager cancelled.', vim.log.levels.INFO)
-        return
-      end
-      local filtered = {}
-      local input_lower = input:lower()
-      for _, lib in ipairs(libraries) do
-        if lib.name:lower():find(input_lower, 1, true) then
-          local label = lib.status_icon ~= '' and (lib.status_icon .. ' ') or ''
-          label = label .. lib.name .. lib.version_info
-          table.insert(filtered, { label = label, value = lib })
-        end
-      end
-      if #filtered == 0 then
-        util.notify('No libraries found for: ' .. input, vim.log.levels.WARN)
-        return
-      end
-      vim.ui.select(filtered, {
-        prompt = 'Select Arduino Library:',
-        format_item = function(item) return item.label end
-      }, function(choice)
-        if not choice or not choice.value then
-          util.notify('Library selection cancelled.', vim.log.levels.INFO)
+    local function prompt_filter(last_input)
+      vim.ui.input({ prompt = 'Filter libraries (type to search): ', default = last_input or "" }, function(input)
+        if input == nil then
+          util.notify('Library manager cancelled.', vim.log.levels.INFO)
           return
         end
-        local actions = {}
-        local selected = choice.value
-        if selected.outdated then
-          table.insert(actions, { label = 'Update', action = 'update' })
-          table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
-        elseif selected.installed then
-          table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
-        else
-          table.insert(actions, { label = 'Install', action = 'install' })
-        end
-        if #actions == 1 then  -- Only one option, skip extra select
-          local act = actions[1].action
-          if act == 'install' then
-            lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.') end)
-          elseif act == 'update' then
-            lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.') end)
-          elseif act == 'uninstall' then
-            lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.') end)
+        local filtered = {}
+        local input_lower = input:lower()
+        for _, lib in ipairs(libraries) do
+          if lib.name:lower():find(input_lower, 1, true) then
+            local label = lib.status_icon ~= '' and (lib.status_icon .. ' ') or ''
+            label = label .. lib.name .. lib.version_info
+            table.insert(filtered, { label = label, value = lib })
           end
+        end
+        if #filtered == 0 then
+          util.notify('No libraries found for: ' .. input, vim.log.levels.WARN)
+          prompt_filter(input)
           return
         end
-        vim.ui.select(actions, {
-          prompt = 'Available actions for "'..selected.name..'":',
+        vim.ui.select(filtered, {
+          prompt = 'Select Arduino Library:',
           format_item = function(item) return item.label end
-        }, function(act_choice)
-          if not act_choice or not act_choice.action then
-            util.notify('No action taken.', vim.log.levels.INFO)
+        }, function(choice)
+          if not choice or not choice.value then
+            util.notify('Library selection cancelled.', vim.log.levels.INFO)
             return
           end
-          if act_choice.action == 'install' then
-            lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.') end)
-          elseif act_choice.action == 'update' then
-            lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.') end)
-          elseif act_choice.action == 'uninstall' then
-            lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.') end)
+          local actions = {}
+          local selected = choice.value
+          if selected.outdated then
+            table.insert(actions, { label = 'Update', action = 'update' })
+            table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
+          elseif selected.installed then
+            table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
+          else
+            table.insert(actions, { label = 'Install', action = 'install' })
           end
+          if #actions == 1 then  -- Only one option, skip extra select
+            local act = actions[1].action
+            if act == 'install' then
+              lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.') end)
+            elseif act == 'update' then
+              lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.') end)
+            elseif act == 'uninstall' then
+              lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.') end)
+            end
+            return
+          end
+          vim.ui.select(actions, {
+            prompt = 'Available actions for "'..selected.name..'":',
+            format_item = function(item) return item.label end
+          }, function(act_choice)
+            if not act_choice or not act_choice.action then
+              util.notify('No action taken.', vim.log.levels.INFO)
+              return
+            end
+            if act_choice.action == 'install' then
+              lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.') end)
+            elseif act_choice.action == 'update' then
+              lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.') end)
+            elseif act_choice.action == 'uninstall' then
+              lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.') end)
+            end
+          end)
         end)
       end)
-    end)
+    end
+    prompt_filter(nil)
   end)
 end
 
