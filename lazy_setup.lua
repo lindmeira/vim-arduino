@@ -12,8 +12,8 @@ return {
       auto_baud = true,
       serial_baud = 57600,
       use_telescope = false, -- Use Telescope for UI if available
+      -- library_manager_emoji = false,
       -- build_path = "{project_dir}/build",
-      -- Override the default 'screen' command
       -- serial_cmd = 'arduino-cli monitor -p {port} --config baudrate={baud}',
       --floating_window = { -- Configure the style of floating windows (logs, monitor)
       --  style = 'telescope', -- 'telescope' (default) or 'lualine'
@@ -32,6 +32,11 @@ return {
     { '<leader>as', '<cmd>ArduinoSerial<cr>', desc = 'Serial Monitor' },
     { '<leader>at', '<cmd>ArduinoChooseProgrammer<cr>', desc = 'Select Programmer' },
     { '<leader>au', '<cmd>ArduinoUploadAndSerial<cr>', desc = 'Flash and Monitor' },
+    -- Hidden shortcuts
     { '<leader>av', '<cmd>ArduinoVerify<cr>', desc = 'which_key_ignore' },
+    -- Grouped shortcuts
+    { '<leader>am', group = '+managers' },
+    { '<leader>amc', '<cmd>ArduinoCoreManager<cr>', desc = 'Core Manager' },
+    { '<leader>aml', '<cmd>ArduinoLibraryManager<cr>', desc = 'Library Manager' },
   },
 }
