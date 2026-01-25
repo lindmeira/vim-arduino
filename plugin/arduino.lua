@@ -11,15 +11,15 @@ if not config.is_setup then
   arduino.setup()
 end
 
-vim.api.nvim_create_user_command('ArduinoAttach', function(opts)
+vim.api.nvim_create_user_command('ArduinoConnectPort', function(opts)
   arduino.attach(opts.args ~= '' and opts.args or nil)
 end, { nargs = '?' })
 
-vim.api.nvim_create_user_command('ArduinoChooseBoard', function()
+vim.api.nvim_create_user_command('ArduinoSelectBoard', function()
   arduino.choose_board()
 end, {})
 
-vim.api.nvim_create_user_command('ArduinoChooseProgrammer', function()
+vim.api.nvim_create_user_command('ArduinoSelectProgrammer', function()
   arduino.choose_programmer()
 end, {})
 
@@ -31,11 +31,11 @@ vim.api.nvim_create_user_command('ArduinoUpload', function()
   arduino.upload()
 end, {})
 
-vim.api.nvim_create_user_command('ArduinoSerial', function()
+vim.api.nvim_create_user_command('ArduinoMonitor', function()
   arduino.serial()
 end, {})
 
-vim.api.nvim_create_user_command('ArduinoUploadAndSerial', function()
+vim.api.nvim_create_user_command('ArduinoUploadAndMonitor', function()
   arduino.upload_and_serial()
 end, {})
 
@@ -55,7 +55,7 @@ vim.api.nvim_create_user_command('ArduinoGetInfo', function()
   arduino.get_info()
 end, {})
 
-vim.api.nvim_create_user_command('ArduinoChoosePort', function()
+vim.api.nvim_create_user_command('ArduinoSelectPort', function()
   arduino.choose_port()
 end, {})
 
