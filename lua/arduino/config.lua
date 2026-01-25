@@ -19,8 +19,8 @@ M.VALID_BAUD_RATES = {
 }
 
 M.defaults = {
-  -- Set to false to disable emoji in fallback library manager lists
-  library_manager_emoji = true,
+  -- Set to false to disable emoji in fallback library/core manager lists
+  manager_emoji = true,
 
   -- If true, results window remains after any install/update/uninstall.
   -- Enables repeated installs in one invocation. Double <Esc> always returns to the search window (not normal mode).

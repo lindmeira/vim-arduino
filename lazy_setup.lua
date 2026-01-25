@@ -1,5 +1,6 @@
 -- Typical arduino.nvim setup for LazyVim
 return {
+
   'meira/vim-arduino',
   dependencies = {
     'nvim-telescope/telescope.nvim', -- Optional: for better UI/UX
@@ -10,13 +11,13 @@ return {
       use_cli = true, -- Use arduino-cli if available
       auto_baud = true,
       serial_baud = 57600,
+      -- manager_emoji = false, -- Defaults to true
       -- use_telescope = false, -- Defaults to true if available
-      -- library_manager_emoji = false,
       -- build_path = "{project_dir}/build",
       -- serial_cmd = 'arduino-cli monitor -p {port} --config baudrate={baud}',
-      --floating_window = { -- Configure floating windows style (logs, monitor)
-      --  style = 'telescope', -- 'telescope' (default) or 'lualine'
-      --},
+      -- floating_window = { -- Configure floating windows style (logs, monitor)
+      --   style = 'telescope', -- 'telescope' (default) or 'lualine'
+      -- },
     }
   end,
   keys = {

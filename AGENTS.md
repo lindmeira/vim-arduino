@@ -17,12 +17,12 @@ Starting in 2026-01, the fallback Arduino Library Manager UI (used when Telescop
 | Available  |  (none) | (none)         |
 
 - By default, emoji are shown at the END of each line in the library list menu ("🟢" for installed, "🟠" for outdated).
-- If emoji are disabled (see `library_manager_emoji` config option) or the terminal does not support emojis, the manager uses a tick "✓" for installed and up-arrow "↑" for outdated.
+- If emoji are disabled (see `manager_emoji` config option) or the terminal does not support emojis, the manager uses a tick "✓" for installed and up-arrow "↑" for outdated.
 - No visual mark is added for libraries that are available but not currently installed/outdated.
 - These symbols are explained in both this AGENTS.md and the README.
 
 **Config:**
-- To disable emoji indicators, set `library_manager_emoji = false` in your plugin configuration table for `require('arduino').setup()`.
+- To disable emoji indicators, set `manager_emoji = false` in your plugin configuration table for `require('arduino').setup()`.
 
 - To enable persistent, multi-selection behavior in the Library Manager (so the results window stays open after each install/uninstall/update and you can take repeated actions in one session), set `library_manager_multiselect = true` in your configuration. When enabled, pressing <Esc> twice from the results window returns you to the search prompt (rather than exiting). Default is `false` for single-action workflow.
 
@@ -30,7 +30,7 @@ Starting in 2026-01, the fallback Arduino Library Manager UI (used when Telescop
 
 ```lua
 require('arduino').setup({
-  library_manager_emoji = false,
+  manager_emoji = false,
   library_manager_multiselect = true, -- NEW: persistent multi-action mode
 })
 ```

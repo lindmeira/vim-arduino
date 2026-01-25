@@ -852,7 +852,7 @@ function M.core_manager_fallback()
     local filtered = {}
     for _, c in ipairs(cores) do
       local label = c.id .. ' (' .. c.name .. ')' .. c.version_info
-      local use_emoji = config.options.library_manager_emoji ~= false
+      local use_emoji = config.options.manager_emoji ~= false
       if use_emoji then
         if c.outdated then
           label = label .. ' 🟠'
@@ -1227,7 +1227,7 @@ function M.library_manager_fallback()
     local filtered = {}
     for _, lib in ipairs(libraries) do
       local label = lib.name .. lib.version_info
-      local use_emoji = config.options.library_manager_emoji ~= false
+      local use_emoji = config.options.manager_emoji ~= false
       if use_emoji then
         if lib.outdated then
           label = label .. ' 🟠'
