@@ -62,9 +62,6 @@ require('arduino').setup({
     
     -- Automatically detect baud rate from `Serial.begin()` in sketch
     auto_baud = true,
-    
-    -- Use arduino-cli (strongly recommended)
-    use_cli = true,
 
     -- Fallback Library/Core Manager status icons (emoji/tick)
      manager_emoji = true, -- set false for tick/up-arrow fallback

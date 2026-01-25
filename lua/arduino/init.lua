@@ -83,8 +83,6 @@ function M.setup(opts)
     config.options.programmer = cpu.programmer
   end
 
-  M.reload_boards()
-
   -- Automatic Lualine integration
   local has_lualine, lualine = pcall(require, 'lualine')
   if has_lualine then
@@ -120,13 +118,6 @@ function M.setup(opts)
       lualine_config.extensions = extensions
       lualine.setup(lualine_config)
     end
-  end
-end
-
-function M.reload_boards()
-  -- Only needed for non-cli or cache warming
-  if not config.options.use_cli then
-    boards.reload_boards()
   end
 end
 
@@ -193,11 +184,6 @@ local function select_item(items, prompt, callback)
 end
 
 function M.attach(port)
-  if not config.options.use_cli then
-    util.notify('ArduinoAttach requires arduino-cli.', vim.log.levels.ERROR)
-    return
-  end
-
   local function perform_attach(p)
     local cmd = { 'arduino-cli', 'board', 'attach', '-p', p }
     -- This command needs to run in the background, not terminal
@@ -209,18 +195,16 @@ function M.attach(port)
           util.get_sketch_config(vim.fn.expand '%:p:h') -- Refresh cache/lookup
 
           -- Try to detect the board from the port we just attached to
-          if config.options.use_cli then
-            local handle = io.popen 'arduino-cli board list --format json'
-            if handle then
-              local result = handle:read '*a'
-              handle:close()
-              local ok, data = pcall(vim.json.decode, result)
-              if ok and data then
-                for _, item in ipairs(data) do
-                  if item.port and item.port.address == p and item.matching_boards and #item.matching_boards > 0 then
-                    config.options.board = item.matching_boards[1].fqbn
-                    break
-                  end
+          local handle = io.popen 'arduino-cli board list --format json'
+          if handle then
+            local result = handle:read '*a'
+            handle:close()
+            local ok, data = pcall(vim.json.decode, result)
+            if ok and data then
+              for _, item in ipairs(data) do
+                if item.port and item.port.address == p and item.matching_boards and #item.matching_boards > 0 then
+                  config.options.board = item.matching_boards[1].fqbn
+                  break
                 end
               end
             end
@@ -470,9 +454,7 @@ function M.get_info()
   table.insert(info, 'Port: ' .. (cli.get_port() or 'None'))
   table.insert(info, 'Baud: ' .. config.options.serial_baud)
   table.insert(info, 'Programmer: ' .. (config.options.programmer or 'None'))
-  if config.options.use_cli then
-    table.insert(info, 'Compilation: ' .. cli.get_compile_command())
-  end
+  table.insert(info, 'Compilation: ' .. cli.get_compile_command())
   print(table.concat(info, '\n'))
 end
 

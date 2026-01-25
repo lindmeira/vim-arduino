@@ -3,29 +3,6 @@ local M = {}
 
 M.os = vim.uv.os_uname().sysname
 
-function M.get_arduino_executable()
-  if vim.g.arduino_cmd then
-    return vim.g.arduino_cmd
-  elseif M.os == 'Darwin' then
-    return '/Applications/Arduino.app/Contents/MacOS/Arduino'
-  else
-    return 'arduino'
-  end
-end
-
-function M.get_arduino_dir()
-  if vim.g.arduino_dir then
-    return vim.g.arduino_dir
-  end
-  local executable = M.get_arduino_executable()
-  local arduino_cmd = vim.fn.exepath(executable)
-  local arduino_dir = vim.fn.fnamemodify(arduino_cmd, ':h')
-  if M.os == 'Darwin' then
-    arduino_dir = vim.fn.fnamemodify(arduino_dir, ':h') .. '/Java'
-  end
-  return arduino_dir
-end
-
 function M.get_arduino_home_dir()
   if vim.g.arduino_home_dir then
     return vim.g.arduino_home_dir
@@ -159,51 +136,35 @@ function M.update_sketch_config(key, value, dir)
   dir = dir or vim.fn.expand '%:p:h'
   local sketch_file, type = M.find_sketch_config(dir)
 
-  -- If using CLI and either no config exists or it's YAML, use manual YAML update with specific format
-  if config.options.use_cli and (not sketch_file or type == 'yaml') then
-    local path = sketch_file or (dir .. '/sketch.yaml')
-    local cpu = M.get_sketch_config(dir) or {}
+  -- Always use YAML (sketch.yaml) for arduino-cli projects
+  local path = (type == 'yaml' and sketch_file) or (dir .. '/sketch.yaml')
+  local cpu = M.get_sketch_config(dir) or {}
 
-    if key == 'fqbn' then
-      cpu.fqbn = value
-    elseif key == 'port' then
-      cpu.port = value
-    elseif key == 'programmer' then
-      cpu.programmer = value
-    end
-
-    local f = io.open(path, 'w')
-    if f then
-      if cpu.fqbn and cpu.fqbn ~= '' then
-        f:write('default_fqbn: ' .. cpu.fqbn .. '\n')
-      end
-      if cpu.port and cpu.port ~= '' then
-        f:write('default_port: ' .. cpu.port .. '\n')
-      end
-      if cpu.programmer and cpu.programmer ~= '' then
-        f:write('default_programmer: ' .. cpu.programmer .. '\n')
-      end
-      f:close()
-      if key == 'fqbn' then
-        M.restart_lsp()
-      end
-    else
-      M.notify('Failed to update sketch.yaml.', vim.log.levels.ERROR)
-    end
-    return
-  end
-
-  -- Fallback to JSON manipulation
-  if not sketch_file then
-    sketch_file = dir .. '/sketch.json'
-  end
-
-  local data = M.read_json(sketch_file) or {}
-  data.cpu = data.cpu or {}
-  data.cpu[key] = value
-  M.write_json(sketch_file, data)
   if key == 'fqbn' then
-    M.restart_lsp()
+    cpu.fqbn = value
+  elseif key == 'port' then
+    cpu.port = value
+  elseif key == 'programmer' then
+    cpu.programmer = value
+  end
+
+  local f = io.open(path, 'w')
+  if f then
+    if cpu.fqbn and cpu.fqbn ~= '' then
+      f:write('default_fqbn: ' .. cpu.fqbn .. '\n')
+    end
+    if cpu.port and cpu.port ~= '' then
+      f:write('default_port: ' .. cpu.port .. '\n')
+    end
+    if cpu.programmer and cpu.programmer ~= '' then
+      f:write('default_programmer: ' .. cpu.programmer .. '\n')
+    end
+    f:close()
+    if key == 'fqbn' then
+      M.restart_lsp()
+    end
+  else
+    M.notify('Failed to update sketch.yaml.', vim.log.levels.ERROR)
   end
 end
 

@@ -7,7 +7,6 @@
 - **Pure Lua**: fast and easy to configure.
 - **`arduino-cli` Integration**: Uses the official CLI for all core operations.
 - **LSP Support**: Automatically restarts the language server when board/port configuration changes.
-- **Project Configuration**: Manages `sketch.yaml` to persist project-specific settings (board, port, programmer).
 - **UI**: Supports `telescope.nvim` for selection menus, with robust pure-Lua fallbacks if Telescope is missing.
 - **Statusline**: Automatic integration with `lualine.nvim`.
 
@@ -44,7 +43,6 @@ The plugin source is located in `lua/arduino/`.
 ```lua
 require('arduino').setup({
     -- See lua/arduino/config.lua for full defaults
-    use_cli = true,
     auto_baud = true,
     serial_baud = 9600,
 })

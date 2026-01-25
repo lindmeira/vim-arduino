@@ -40,7 +40,7 @@ This makes the fallback list render tick (✓) and up-arrow (↑) ASCII symbols 
 
 ### 1.1 Requirements
 - **Neovim 0.7+** (required, as this is a Neovim plugin)
-- **arduino-cli** (https://arduino.github.io/arduino-cli/latest/installation/)
+- **arduino-cli** (https://arduino.github.io/arduino-cli/latest/installation/) - **MANDATORY**
 - (Recommended) **arduino-language-server** (for LSP integration)
 
 ### 1.2 Building/Installing the Plugin

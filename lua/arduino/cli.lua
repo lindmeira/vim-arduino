@@ -2,17 +2,18 @@ local config = require 'arduino.config'
 local util = require 'arduino.util'
 local M = {}
 
-function M.get_ports(use_cli)
+function M.get_ports(include_cli_discovery)
   local ports = {}
+  -- Fast glob discovery
   for _, pattern in ipairs(config.options.serial_port_globs) do
     local found = vim.fn.glob(pattern, true, true)
     for _, port in ipairs(found) do
       table.insert(ports, port)
     end
   end
-  -- Only use arduino-cli if explicitly requested (e.g. for selection UI)
-  -- to avoid synchronous latency during startup/ftplugin load.
-  if use_cli and config.options.use_cli then
+
+  -- Detailed discovery via arduino-cli (matched boards)
+  if include_cli_discovery then
     local handle = io.popen 'arduino-cli board list --format json'
     if handle then
       local result = handle:read '*a'
@@ -21,7 +22,7 @@ function M.get_ports(use_cli)
       if ok and data then
         for _, item in ipairs(data) do
           if item.port and item.port.address then
-            -- Check if already in ports to avoid duplicates
+            -- Avoid duplicates from globs
             local exists = false
             for _, p in ipairs(ports) do
               if p == item.port.address then
@@ -76,40 +77,24 @@ function M.get_build_path()
 end
 
 function M.get_compile_command(extra_args)
-  local cmd = ''
   local build_path = M.get_build_path()
 
   -- Check sketch config for board preference
   local sketch_cpu = util.get_sketch_config()
   local board = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
-  local programmer = config.options.programmer
 
-  if config.options.use_cli then
-    cmd = 'arduino-cli compile'
-    if board then
-      cmd = cmd .. ' -b ' .. board
-    end
-
-    -- NOTE: Port is NOT needed for compilation.
-    -- Removing it here avoids unnecessary port detection latency.
-
-    if build_path then
-      cmd = cmd .. ' --build-path "' .. build_path .. '"'
-    end
-    if extra_args then
-      cmd = cmd .. ' ' .. extra_args
-    end
-    cmd = cmd .. ' ' .. config.options.cli_args
-  else
-    -- Old arduino executable
-    local exe = util.get_arduino_executable()
-    cmd = exe .. ' --verify --board ' .. board
-    if build_path then
-      cmd = cmd .. ' --pref build.path=' .. build_path
-    end
-    cmd = cmd .. ' ' .. config.options.args
+  local cmd = 'arduino-cli compile'
+  if board then
+    cmd = cmd .. ' -b ' .. board
   end
 
+  if build_path then
+    cmd = cmd .. ' --build-path "' .. build_path .. '"'
+  end
+  if extra_args then
+    cmd = cmd .. ' ' .. extra_args
+  end
+  cmd = cmd .. ' ' .. config.options.cli_args
   cmd = cmd .. ' "' .. vim.fn.expand '%:p' .. '"'
   return cmd
 end
@@ -118,27 +103,14 @@ function M.get_upload_command()
   local cmd = M.get_compile_command()
   local port = M.get_port()
 
-  if config.options.use_cli then
-    cmd = cmd:gsub('^arduino%-cli compile', 'arduino-cli compile -u')
-    if port then
-      cmd = cmd .. ' -p ' .. port
-    end
-    if config.options.programmer and config.options.programmer ~= '' then
-      cmd = cmd .. ' -P ' .. config.options.programmer
-    end
-    return cmd
-  else
-    cmd = cmd:gsub('%-%-verify', '') -- Remove verify
-    if port then
-      cmd = cmd .. ' --port ' .. port
-    end
-    if config.options.programmer and config.options.programmer ~= '' then
-      cmd = cmd .. ' --upload --useprogrammer --pref programmer=' .. config.options.programmer
-    else
-      cmd = cmd .. ' --upload'
-    end
-    return cmd
+  cmd = cmd:gsub('^arduino%-cli compile', 'arduino-cli compile -u')
+  if port then
+    cmd = cmd .. ' -p ' .. port
   end
+  if config.options.programmer and config.options.programmer ~= '' then
+    cmd = cmd .. ' -P ' .. config.options.programmer
+  end
+  return cmd
 end
 
 function M.get_serial_command()
@@ -162,9 +134,6 @@ function M.get_serial_command()
 end
 
 function M.get_board_details(fqbn)
-  if not config.options.use_cli then
-    return nil
-  end
   -- Strip existing options from FQBN if present to get base details
   local base_fqbn = fqbn:match '^([^:]+:[^:]+:[^:]+)' or fqbn
 

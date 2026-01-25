@@ -7,7 +7,6 @@ return {
   ft = 'arduino',
   config = function()
     require('arduino').setup {
-      use_cli = true, -- Use arduino-cli if available
       auto_baud = true,
       serial_baud = 57600,
       -- manager_emoji = false, -- Defaults to true
@@ -39,4 +38,3 @@ return {
     { '<leader>aml', '<cmd>ArduinoLibraryManager<cr>', desc = 'Library Manager' },
   },
 }
-

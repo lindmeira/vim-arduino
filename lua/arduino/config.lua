@@ -37,7 +37,6 @@ M.defaults = {
     '/dev/tty.usbserial*',
     '/dev/tty.wchusbserial*',
   },
-  use_cli = true,
   hardware_dirs = {},
   use_telescope = true,
   manual_baud = false,
@@ -64,7 +63,6 @@ function M.setup(opts)
     serial_baud = vim.g.arduino_serial_baud,
     auto_baud = vim.g.arduino_auto_baud,
     serial_port_globs = vim.g.arduino_serial_port_globs,
-    use_cli = vim.g.arduino_use_cli,
   }
 
   -- Merge defaults, globals, and passed opts
@@ -72,11 +70,6 @@ function M.setup(opts)
 
   -- Preserve the configured baud rate as a fallback for auto_baud
   M.options.original_baud = M.options.serial_baud
-
-  -- Detect arduino-cli if use_cli is null/nil (though we defaulted to true above, let's be smart)
-  if M.options.use_cli == nil then
-    M.options.use_cli = vim.fn.executable 'arduino-cli' == 1
-  end
 end
 
 return M
