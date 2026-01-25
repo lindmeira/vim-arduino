@@ -81,6 +81,11 @@ This makes the fallback list render tick (✓) and up-arrow (↑) ASCII symbols 
 #### CI/Automation
 - Agents may wish to spin up a Neovim headless session with the plugin loaded to script some checks. There is no headless test harness included yet.
 
+#### Fallback Library Manager UI (2026-01+)
+- When Telescope is not available, invoking the Library Manager opens a results window showing all libraries found by `arduino-cli lib search ""`.
+- Type to filter the list and pick a library.
+- When a library is selected and <Enter> is pressed, the appropriate install/update/uninstall action is triggered asynchronously. The picker window closes immediately and a notification will indicate result (success/failure).
+- Multi-selection mode is not available in fallback mode at this time.
 
 ---
 

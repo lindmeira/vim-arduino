@@ -1093,122 +1093,68 @@ function M.library_manager_fallback()
   util.notify('Loading library data...', vim.log.levels.INFO)
   fetch_library_data(function(libraries)
     if not libraries then return end
-    local function prompt_filter(last_input)
-      vim.ui.input({ prompt = 'Filter libraries (type to search): ', default = last_input or "" }, function(input)
-        if input == nil then
-          util.notify('Library manager cancelled.', vim.log.levels.INFO)
+
+    -- Prepare the full, unfiltered results list
+    local filtered = {}
+    for _, lib in ipairs(libraries) do
+      local label = lib.name .. lib.version_info
+      local use_emoji = config.options.library_manager_emoji ~= false
+      if use_emoji then
+        if lib.outdated then
+          label = label .. ' 🟠'
+        elseif lib.installed then
+          label = label .. ' 🟢'
+        end
+      else
+        if lib.outdated then
+          label = label .. ' ↑'
+        elseif lib.installed then
+          label = label .. ' ✓'
+        end
+      end
+      table.insert(filtered, { label = label, value = lib })
+    end
+
+    local function open_results_window(filtered_items)
+      vim.ui.select(filtered_items, {
+        prompt = 'Select Arduino Library:',
+        format_item = function(item) return item.label end
+      }, function(choice)
+        -- On CANCEL, do nothing, just close
+        if not choice or not choice.value then
+          util.notify('Library selection cancelled.', vim.log.levels.INFO)
           return
         end
-        local filtered = {}
-        local input_lower = input:lower()
-        for _, lib in ipairs(libraries) do
-          if lib.name:lower():find(input_lower, 1, true) then
-            local label = lib.name .. lib.version_info
-            local use_emoji = config.options.library_manager_emoji ~= false
-            if use_emoji then
-              if lib.outdated then
-                label = label .. ' 🟠'
-              elseif lib.installed then
-                label = label .. ' 🟢'
-              end
-            else
-              if lib.outdated then
-                label = label .. ' ↑'
-              elseif lib.installed then
-                label = label .. ' ✓'
-              end
-            end
-            table.insert(filtered, { label = label, value = lib })
-          end
+        local selected = choice.value
+        local action
+        if selected.outdated then
+          action = 'update'
+        elseif selected.installed then
+          action = 'uninstall'
+        else
+          action = 'install'
         end
-         if #filtered == 0 then
-           util.notify('No libraries found for: ' .. input, vim.log.levels.WARN)
-           prompt_filter(input)
-           return
-         end
 
-         -- If multiselect is enabled, show a tip (once) for persistent mode
-         if config.options.library_manager_multiselect and not config._multiselect_tip_shown then
-           config._multiselect_tip_shown = true
-           util.notify("Persistent mode: Results window remains open. Press <Esc> twice to return to search.", vim.log.levels.INFO)
-         end
-
-         local function open_results_window(filtered_items, last_input)
-           vim.ui.select(filtered_items, {
-             prompt = 'Select Arduino Library:',
-             format_item = function(item) return item.label end
-           }, function(choice)
-             -- Sticky CANCEL handling: if multiselect enabled, fall back to search window. Otherwise, go to normal mode.
-             if not choice or not choice.value then
-               if config.options.library_manager_multiselect then
-                 prompt_filter(last_input)
-                 return
-               else
-                 util.notify('Library selection cancelled.', vim.log.levels.INFO)
-                 return
-               end
-             end
-             local actions = {}
-             local selected = choice.value
-             if selected.outdated then
-               table.insert(actions, { label = 'Update', action = 'update' })
-               table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
-             elseif selected.installed then
-               table.insert(actions, { label = 'Uninstall', action = 'uninstall' })
-             else
-               table.insert(actions, { label = 'Install', action = 'install' })
-             end
-             local restart_results = function()
-               -- re-open results window with same list and filter
-               open_results_window(filtered_items, last_input)
-             end
-             if #actions == 1 then  -- Only one option, skip extra select
-               local act = actions[1].action
-               if act == 'install' then
-                 lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               elseif act == 'update' then
-                 lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               elseif act == 'uninstall' then
-                 lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               end
-               if not config.options.library_manager_multiselect then
-                 return
-               end
-               -- multiselect: keep window up, so DO NOT return
-               -- restart_results will handle it
-               return
-             end
-             vim.ui.select(actions, {
-               prompt = 'Available actions for "'..selected.name..'":',
-               format_item = function(item) return item.label end
-             }, function(act_choice)
-               if not act_choice or not act_choice.action then
-                 util.notify('No action taken.', vim.log.levels.INFO)
-                 -- results window remains if multiselect, else closes
-                 if config.options.library_manager_multiselect then restart_results() end
-                 return
-               end
-               if act_choice.action == 'install' then
-                 lib.install(selected.name, function() util.notify('Install of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               elseif act_choice.action == 'update' then
-                 lib.upgrade(selected.name, function() util.notify('Update of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               elseif act_choice.action == 'uninstall' then
-                 lib.uninstall(selected.name, function() util.notify('Uninstall of ' .. selected.name .. ' complete.'); if config.options.library_manager_multiselect then restart_results() end end)
-               end
-               -- non-multiselect: window closes (normal flow)
-             end)
-           end)
-         end
-         -- Show results/select for this search
-         open_results_window(filtered, input)
-
-
-
+        if action == 'install' then
+          lib.install(selected.name, function()
+            util.notify('Install of ' .. selected.name .. ' complete.')
+          end)
+        elseif action == 'update' then
+          lib.upgrade(selected.name, function()
+            util.notify('Update of ' .. selected.name .. ' complete.')
+          end)
+        elseif action == 'uninstall' then
+          lib.uninstall(selected.name, function()
+            util.notify('Uninstall of ' .. selected.name .. ' complete.')
+          end)
+        end
+        -- Picker window closes regardless, notification will arrive asynchronously
       end)
     end
-    prompt_filter(nil)
+    open_results_window(filtered)
   end)
 end
+
 
 local orig_library_manager = M.library_manager
 function M.library_manager()
