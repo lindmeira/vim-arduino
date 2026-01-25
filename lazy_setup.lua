@@ -2,8 +2,7 @@
 return {
   'meira/vim-arduino',
   dependencies = {
-    -- Optional: if you want a better UI for board/port selection
-    'nvim-telescope/telescope.nvim',
+    'nvim-telescope/telescope.nvim', -- Optional: for better UI/UX
   },
   ft = 'arduino',
   config = function()
@@ -11,11 +10,11 @@ return {
       use_cli = true, -- Use arduino-cli if available
       auto_baud = true,
       serial_baud = 57600,
-      use_telescope = false, -- Use Telescope for UI if available
+      -- use_telescope = false, -- Defaults to true if available
       -- library_manager_emoji = false,
       -- build_path = "{project_dir}/build",
       -- serial_cmd = 'arduino-cli monitor -p {port} --config baudrate={baud}',
-      --floating_window = { -- Configure the style of floating windows (logs, monitor)
+      --floating_window = { -- Configure floating windows style (logs, monitor)
       --  style = 'telescope', -- 'telescope' (default) or 'lualine'
       --},
     }
