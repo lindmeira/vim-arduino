@@ -23,7 +23,7 @@ return {
     { '<leader>ab', '<cmd>ArduinoChooseBoard<cr>', desc = 'Select Board' },
     { '<leader>ac', '<cmd>ArduinoVerify<cr>', desc = 'Compile/Verify' },
     { '<leader>af', '<cmd>ArduinoUpload<cr>', desc = 'Flash Firmware' },
-    { '<leader>ai', '<cmd>ArduinoInfo<cr>', desc = 'Current Settings' },
+    { '<leader>ai', '<cmd>ArduinoGetInfo<cr>', desc = 'Current Settings' },
     { '<leader>al', '<cmd>ArduinoCheckLogs<cr>', desc = 'Check Logs' },
     { '<leader>ap', '<cmd>ArduinoChoosePort<cr>', desc = 'Select Port' },
     { '<leader>ar', '<cmd>ArduinoSetBaud<cr>', desc = 'Baud Rate' },
