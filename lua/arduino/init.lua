@@ -297,15 +297,23 @@ function M.choose_port()
     util.notify('No serial ports found.', vim.log.levels.WARN)
     return
   end
-  local items = {}
+  local items = {
+    { label = 'Auto (detect from system)', value = '__AUTO_PORT__' },
+  }
   for _, p in ipairs(ports) do
     table.insert(items, { label = p, value = p })
   end
   select_item(items, 'Select Port', function(value)
-    vim.g.arduino_serial_port = value -- Set global as overrides
-    -- Update sketch config
-    util.update_sketch_config('port', value)
-    util.notify('Selected port: ' .. value)
+    if value == '__AUTO_PORT__' then
+      -- Remove locked port from config
+      vim.g.arduino_serial_port = nil
+      util.update_sketch_config('port', nil) -- Remove port entry
+      util.notify 'Port reset to AUTO mode.'
+    else
+      vim.g.arduino_serial_port = value -- Set global as overrides
+      util.update_sketch_config('port', value)
+      util.notify('Selected port: ' .. value)
+    end
   end)
 end
 
@@ -462,7 +470,7 @@ end
 function M.set_baud(baud, is_auto)
   if baud == nil or baud == '' then
     local items = {
-      { label = 'Auto (Detect from code)', value = 'auto' },
+      { label = 'Auto (detect from code)', value = 'auto' },
     }
     local rates = {}
     for r, _ in pairs(config.VALID_BAUD_RATES) do
@@ -481,7 +489,7 @@ function M.set_baud(baud, is_auto)
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local detected = util.detect_baud_rate(lines)
     M.set_baud(detected, true)
-    util.notify 'Baud rate reset to Auto mode.'
+    util.notify 'Baud rate reset to AUTO mode.'
     return
   end
 
