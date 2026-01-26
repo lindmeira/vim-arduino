@@ -91,4 +91,4 @@ local status = require('arduino.status').string()
 
 ## License
 
-Everything is under the [MIT License](https://github.com/lindmeira/arduino.nvim/blob/master/LICENSE) except for the syntax file, which is under the [Vim License](http://vimdoc.sourceforge.net/htmldoc/uganda.html).
+Everything is under the [MIT License](https://github.com/lindmeira/arduino.nvim/blob/master/LICENSE).
