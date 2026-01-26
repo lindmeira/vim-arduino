@@ -293,16 +293,19 @@ end
 
 function M.choose_port()
   local ports = cli.get_ports(true)
-  if #ports == 0 then
-    util.notify('No serial ports found.', vim.log.levels.WARN)
-    return
-  end
   local items = {
-    { label = 'Auto (detect from system)', value = '__AUTO_PORT__' },
+    { label = 'Auto (detect from system)', value = '__AUTO_PORT__' }
   }
-  for _, p in ipairs(ports) do
-    table.insert(items, { label = p, value = p })
+
+  if #ports == 0 then
+    -- Show only 'auto'; warn user before picker
+    require('arduino.util').notify('No serial ports available at the moment.', vim.log.levels.WARN)
+  else
+    for _, p in ipairs(ports) do
+      table.insert(items, { label = p, value = p })
+    end
   end
+
   select_item(items, 'Select Port', function(value)
     if value == '__AUTO_PORT__' then
       -- Remove locked port from config
