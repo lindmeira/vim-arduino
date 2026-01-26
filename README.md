@@ -10,7 +10,7 @@ A Neovim plugin for Arduino development, rewritten completely in Lua. It serves 
 
 ```lua
 {
-    "lindmeira/vim-arduino",
+    "lindmeira/arduino.nvim",
     ft = "arduino",
     config = function()
         require("arduino").setup({

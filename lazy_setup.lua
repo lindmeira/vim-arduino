@@ -1,6 +1,6 @@
 -- Typical arduino.nvim setup for LazyVim
 return {
-  'meira/arduino.nvim',
+  'lindmeira/arduino.nvim',
   dependencies = {
     'nvim-telescope/telescope.nvim', -- Optional: for better UI/UX
   },
