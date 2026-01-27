@@ -258,14 +258,115 @@ function M.choose_port()
   end)
 end
 
+local function check_save()
+  if vim.bo.modified then
+    local choice = vim.fn.confirm('Buffer has unsaved changes. Save?', '&Yes\n&No\n&Cancel')
+    if choice == 1 then
+      vim.cmd 'write'
+    elseif choice == 3 then
+      return false -- Cancel
+    end
+  end
+  return true
+end
+
+local function get_receipt_path()
+  local build_path = cli.get_build_path()
+  if not build_path then return nil end
+  return build_path .. '/build_receipt.json'
+end
+
+local function save_build_receipt()
+  local path = get_receipt_path()
+  if not path then return end
+  
+  -- Ensure build dir exists (it should after compile)
+  vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
+
+  -- Resolve FQBN exactly as cli.lua does (prefer sketch config)
+  local sketch_cpu = util.get_sketch_config()
+  local fqbn = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
+  
+  local data = { fqbn = fqbn }
+  
+  local f = io.open(path, 'w')
+  if f then
+    f:write(vim.json.encode(data))
+    f:close()
+  end
+end
+
+local function check_build_receipt()
+  local path = get_receipt_path()
+  if not path or vim.fn.filereadable(path) == 0 then
+    return false
+  end
+  
+  local f = io.open(path, 'r')
+  if not f then return false end
+  local content = f:read('*a')
+  f:close()
+  
+  local ok, data = pcall(vim.json.decode, content)
+  if not ok or not data or not data.fqbn then
+    return false
+  end
+  
+  -- Resolve current target FQBN
+  local sketch_cpu = util.get_sketch_config()
+  local current_fqbn = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
+
+  return data.fqbn == current_fqbn
+end
+
 function M.verify()
+  if not check_save() then return end
   local cmd = cli.get_compile_command()
-  term.run_silent(cmd, 'Compilation')
+  term.run_silent(cmd, 'Compilation', function()
+    save_build_receipt()
+  end)
+end
+
+local function perform_smart_upload(callback)
+  if not check_save() then return end
+
+  local build_path = cli.get_build_path()
+  local needs_compile = true
+
+  if build_path then
+    local elf_files = vim.fn.glob(build_path .. '/*.elf', true, true)
+    if #elf_files > 0 then
+      local elf_file = elf_files[1]
+      local sketch_path = vim.fn.expand '%:p'
+      local sketch_time = vim.fn.getftime(sketch_path)
+      local elf_time = vim.fn.getftime(elf_file)
+
+      -- Check if binary is newer AND board config matches
+      if elf_time >= sketch_time and check_build_receipt() then
+        needs_compile = false
+      end
+    end
+  end
+
+  local cmd
+  if needs_compile then
+    cmd = cli.get_upload_command()
+    -- Wrap callback to save receipt on success
+    local original_callback = callback
+    callback = function()
+      save_build_receipt()
+      if original_callback then original_callback() end
+    end
+  else
+    util.notify('Binary up-to-date, skipping compilation.', vim.log.levels.INFO)
+    cmd = cli.get_upload_only_command()
+  end
+
+  term.run_silent(cmd, 'Flashing', callback)
 end
 
 function M.upload()
-  local cmd = cli.get_upload_command()
-  term.run_silent(cmd, 'Flashing')
+  perform_smart_upload()
 end
 
 function M.serial()
@@ -347,8 +448,7 @@ function M.serial()
 end
 
 function M.upload_and_serial()
-  local upload_cmd = cli.get_upload_command()
-  term.run_silent(upload_cmd, 'Flashing', function()
+  perform_smart_upload(function()
     M.serial()
   end)
 end

@@ -316,7 +316,20 @@ local function run_with_simulator(sim_val)
   end
 end
 
+local function check_save()
+  if vim.bo.modified then
+    local choice = vim.fn.confirm('Buffer has unsaved changes. Save?', '&Yes\n&No\n&Cancel')
+    if choice == 1 then
+      vim.cmd 'write'
+    elseif choice == 3 then
+      return false -- Cancel
+    end
+  end
+  return true
+end
+
 function M.run()
+  if not check_save() then return end
   local conf = read_simulation_config()
   local sim = conf and conf.simulator
 

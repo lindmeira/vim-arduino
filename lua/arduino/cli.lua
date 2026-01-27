@@ -113,6 +113,29 @@ function M.get_upload_command()
   return cmd
 end
 
+function M.get_upload_only_command()
+  local build_path = M.get_build_path()
+  local sketch_cpu = util.get_sketch_config()
+  local board = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
+  local port = M.get_port()
+
+  local cmd = 'arduino-cli upload'
+  if board then
+    cmd = cmd .. ' -b ' .. board
+  end
+  if port then
+    cmd = cmd .. ' -p ' .. port
+  end
+  if build_path then
+    cmd = cmd .. ' --input-dir "' .. build_path .. '"'
+  end
+  if config.options.programmer and config.options.programmer ~= '' then
+    cmd = cmd .. ' -P ' .. config.options.programmer
+  end
+  cmd = cmd .. ' ' .. config.options.cli_args
+  return cmd
+end
+
 function M.get_serial_command()
   local port = M.get_port()
   if not port then
