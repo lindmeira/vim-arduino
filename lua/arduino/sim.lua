@@ -167,27 +167,40 @@ local function launch_simavr(mcu, freq, elf_path)
   vim.keymap.set('n', 'q', '<cmd>close<cr>', opts)
 end
 
-local function ensure_elf_and_run(mcu, freq)
+local function ensure_elf_and_run(mcu, freq, force_compile)
   local build_path = cli.get_build_path()
   if not build_path then
     util.notify('Build path not configured.', vim.log.levels.ERROR)
     return
   end
 
-  local elf_files = vim.fn.glob(build_path .. '/*.elf', true, true)
-  local elf_file = nil
-  if #elf_files > 0 then
-    elf_file = elf_files[1]
+  local function find_elf()
+    local elf_files = vim.fn.glob(build_path .. '/*.elf', true, true)
+    if #elf_files > 0 then
+      return elf_files[1]
+    end
+    return nil
+  end
+
+  local elf_file = find_elf()
+  local needs_compile = force_compile
+
+  if not needs_compile then
+    if not elf_file or vim.fn.filereadable(elf_file) == 0 then
+      needs_compile = true
+    else
+      -- Check timestamp against current sketch file
+      local sketch_path = vim.fn.expand '%:p'
+      local sketch_time = vim.fn.getftime(sketch_path)
+      local elf_time = vim.fn.getftime(elf_file)
+      if sketch_time > elf_time then
+        needs_compile = true
+      end
+    end
   end
 
   local function run()
-    if not elf_file or vim.fn.filereadable(elf_file) == 0 then
-      elf_files = vim.fn.glob(build_path .. '/*.elf', true, true)
-      if #elf_files > 0 then
-        elf_file = elf_files[1]
-      end
-    end
-
+    elf_file = find_elf()
     if elf_file and vim.fn.filereadable(elf_file) == 1 then
       launch_simavr(mcu, freq, elf_file)
     else
@@ -195,8 +208,8 @@ local function ensure_elf_and_run(mcu, freq)
     end
   end
 
-  if not elf_file then
-    util.notify('Build artifact not found. Compiling first...', vim.log.levels.INFO)
+  if needs_compile then
+    util.notify('Compiling sketch...', vim.log.levels.INFO)
     local cmd = cli.get_compile_command()
     term.run_silent(cmd, 'Compilation', run)
   else
@@ -250,50 +263,45 @@ local function setup_simavr(simulator_name)
   local base_fqbn = fqbn:match '^([^:]+:[^:]+:[^:]+)' or fqbn
 
   local existing_config = read_simulation_config()
+  local mcu, freq
+  local force_compile = false
 
-  local valid_config = false
-  if existing_config then
-    if existing_config.fqbn then
-      local config_base = existing_config.fqbn:match '^([^:]+:[^:]+:[^:]+)' or existing_config.fqbn
-      if config_base == base_fqbn then
-        valid_config = true
-      end
-    else
-      valid_config = true
-    end
-  end
-
-  if valid_config and existing_config.mcu and existing_config.freq then
-    -- If we have a simulator name passed in, update it in the config if it differs
+  -- Check if existing config matches current FQBN exactly
+  if existing_config and existing_config.fqbn == fqbn and existing_config.mcu and existing_config.freq then
+    mcu = existing_config.mcu
+    freq = existing_config.freq
+    -- If simulator preference changed, update it
     if simulator_name and existing_config.simulator ~= simulator_name then
-      save_simulation_config(existing_config.mcu, existing_config.freq, existing_config.fqbn, simulator_name)
+      save_simulation_config(mcu, freq, fqbn, simulator_name)
     end
-    ensure_elf_and_run(existing_config.mcu, existing_config.freq)
-    return
-  end
+  else
+    -- Config mismatch or missing: re-evaluate and force compile
+    force_compile = true
+    local guess = FQBN_MAP[base_fqbn]
 
-  -- Guessing Logic
-  local guess = FQBN_MAP[base_fqbn]
-
-  if not guess then
-    -- Try pattern matching against the full FQBN (including options)
-    for _, item in ipairs(FQBN_PATTERNS) do
-      if fqbn:match(item.pattern) then
-        guess = item
-        break
+    if not guess then
+      for _, item in ipairs(FQBN_PATTERNS) do
+        if fqbn:match(item.pattern) then
+          guess = item
+          break
+        end
       end
     end
+
+    if guess then
+      mcu = guess.mcu
+      freq = guess.freq
+      save_simulation_config(mcu, freq, fqbn, simulator_name)
+    else
+      select_mcu_and_freq(function(selected_mcu, selected_freq)
+        save_simulation_config(selected_mcu, selected_freq, fqbn, simulator_name)
+        ensure_elf_and_run(selected_mcu, selected_freq, true)
+      end)
+      return
+    end
   end
 
-  if guess then
-    save_simulation_config(guess.mcu, guess.freq, base_fqbn, simulator_name)
-    ensure_elf_and_run(guess.mcu, guess.freq)
-  else
-    select_mcu_and_freq(function(mcu, freq)
-      save_simulation_config(mcu, freq, base_fqbn, simulator_name)
-      ensure_elf_and_run(mcu, freq)
-    end)
-  end
+  ensure_elf_and_run(mcu, freq, force_compile)
 end
 
 local function run_with_simulator(sim_val)
