@@ -211,7 +211,28 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
   if needs_compile then
     util.notify('Compiling sketch...', vim.log.levels.INFO)
     local cmd = cli.get_compile_command()
-    term.run_silent(cmd, 'Compilation', run)
+    term.run_silent(cmd, 'Compilation', function()
+      -- We need to save the receipt here to keep it in sync with uploads
+      -- Accessing internal function from another module is tricky without export
+      -- We'll just call the same logic or if possible require init (careful of circular deps)
+      -- Simplest: Re-implement saving receipt logic here or export it in init.lua
+      -- Let's try to do it properly by duplicating minimal logic to avoid circular dependency
+      local receipt_path = cli.get_build_path() .. '/build_receipt.json'
+      local fqbn = config.options.board
+      -- Prefer FQBN from sketch.yaml if available, just like init.lua
+      local sketch_cpu = util.get_sketch_config()
+      if sketch_cpu and sketch_cpu.fqbn then
+        fqbn = sketch_cpu.fqbn
+      end
+      
+      local f = io.open(receipt_path, 'w')
+      if f then
+        f:write(vim.json.encode({ fqbn = fqbn }))
+        f:close()
+      end
+      
+      run()
+    end)
   else
     run()
   end
