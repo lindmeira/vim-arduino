@@ -6,6 +6,7 @@ CONTENTS                                                     *arduino-contents*
     1. Intro...........................................|arduino-intro|
     2. Options.........................................|arduino-options|
     3. Commands........................................|arduino-commands|
+    4. Simulation......................................|arduino-simulation|
 
 ===============================================================================
 INTRO                                                           *arduino-intro*
@@ -40,7 +41,7 @@ Detailed descriptions and default values:~
 
                                                          *'g:arduino_build_path'*
 The path where the sketch will be built and all intermediate object files will
-be placed. The final binary (.bin) can be found after building/verification in
+be placed. The final binary (.elf) can be found after building/verification in
 the folder.
 For a dynamic path you can following substitutions:
  - {file} is substituted with the current sketch file (.ino)
@@ -59,12 +60,12 @@ more detail. >
 <
                                                               *'g:arduino_board'*
 The board type to use when compiling and uploading. See also
-|:ArduinoChooseBoard|. >
+|:ArduinoSelectBoard|. >
   let g:arduino_board = 'arduino:avr:uno'
 <
                                                          *'g:arduino_programmer'*
 The programmer type to use when compiling and uploading. See also
-|:ArduinoChooseProgrammer|. >
+|:ArduinoSelectProgrammer|. >
   let g:arduino_programmer = 'arduino:usbtinyisp'
 <
                                                          *'g:arduino_serial_cmd'*
@@ -96,8 +97,8 @@ Automatically set the baud rate by searching for 'Serial.begin()' >
 
                                                         *'g:arduino_serial_port'*
 Connect to this serial port when uploading & debugging. This is not set by
-default. If not set, vim-arduino will attempt to guess which port to use. See
-also |:ArduinoChoosePort| >
+default. If not set, the plugin will attempt to guess which port to use. See
+also |:ArduinoSelectPort| >
   let g:arduino_serial_port = '/dev/ttyACM0'
 <
 
@@ -112,62 +113,83 @@ Search these patterns to find a likely serial port to upload to. >
 ===============================================================================
 COMMANDS                                                       *arduino-commands*
 
-                                                                 *:ArduinoAttach*
-:ArduinoAttach [port]
-   Automatically attach to your board (see `arduino-cli board attach -h`). If
-   no port is provided and there is more than one option, you will be prompted
-   to select one.
-
-                                                            *:ArduinoChooseBoard*
-:ArduinoChooseBoard [board]
+                                                            *:ArduinoSelectBoard*
+:ArduinoSelectBoard [board]
    Set [board] to be the currently selected board. It should match the format
    of 'package:arch:board[:parameters]'.
 
-   If |g:arduino_board| is not set, the board passed in will be saved to disk
-   and used when you start new vim sessions.
+   Updates the `sketch.yaml` file and restarts the language server.
 
-   If passed no arguments, open a list and let the user select one from the
-   list. If there are any special options for the board (e.g. cpu) successive
-   list selections will be opened for those.
+                                                       *:ArduinoSelectProgrammer*
+:ArduinoSelectProgrammer [programmer]
+   Set [programmer] to be the currently selected programmer. It should match
+   the format of 'package:programmer'.
 
-                                                       *:ArduinoChooseProgrammer*
-:ArduinoChooseProgrammer [programmer]
-   Set [programmer] to be the currently selected board. It should match the
-   format of 'package:programmer'.
-
-   If |g:arduino_programmer| is not set, the programmer passed in will be
-   saved to disk and used when you start new vim sessions.
-
-   If passed no arguments, open a list and let the user select one from the
-   list.
-
-                                                             *:ArduinoChoosePort*
-:ArduinoChoosePort [port]
+                                                             *:ArduinoSelectPort*
+:ArduinoSelectPort [port]
    Set [port] to be the currently selected serial port. If passed no
    arguments, open a list of likely ports and let the user select one.
 
                                                                  *:ArduinoVerify*
 :ArduinoVerify
-   Compile your project.
+   Compile your project. Saves a build receipt to track FQBN validity.
+
                                                                  *:ArduinoUpload*
 :ArduinoUpload
-   Compile and upload your project.
-                                                                 *:ArduinoSerial*
-:ArduinoSerial
+   Flash the sketch to the hardware. Uses smart recompilation to skip building
+   if the source hasn't changed and the board matches the last build.
+
+                                                                *:ArduinoMonitor*
+:ArduinoMonitor
    Open a connection to the serial port for debugging.
-                                                        *:ArduinoUploadAndSerial*
-:ArduinoUploadAndSerial
-   Compile and upload your project. If successful, open a connection to the
-   serial port for debugging.
-                                                                   *:ArduinoInfo*
+
+                                                       *:ArduinoUploadAndMonitor*
+:ArduinoUploadAndMonitor
+   Compile and upload your project, then open the serial monitor.
+
+                                                           *:ArduinoRunSimulation*
+:ArduinoRunSimulation
+   Run the project in a hardware simulator. See |arduino-simulation|.
+
+                                                        *:ArduinoSelectSimulator*
+:ArduinoSelectSimulator
+   Select the preferred simulator (e.g., SimAVR).
+
+                                                         *:ArduinoResetSimulation*
+:ArduinoResetSimulation
+   Clear simulation configuration (MCU, frequency) for the current project.
+
+                                                                    *:ArduinoInfo*
 :ArduinoInfo
-   Display information about the internal state of vim-arduino, including the
-   board, port, and the command that will be run in the terminal to verify your
-   sketch.
+   Display information about the internal state, including board, port, and
+   compilation commands.
 
                                                                 *:ArduinoSetBaud*
 :ArduinoSetBaud [baud]
-   Set the baud rate used for serial connections. See |g:arduino_serial_baud|
+   Set the baud rate used for serial connections.
+
+                                                               *:ArduinoCheckLogs*
+:ArduinoCheckLogs
+   Open a buffer containing the output logs of the last operation.
+
+===============================================================================
+SIMULATION                                                   *arduino-simulation*
+
+The plugin provides an extensible framework for running your code in a
+simulator. Currently, built-in support is provided for **SimAVR**.
+
+To run a simulation:
+1. Run `:ArduinoRunSimulation`.
+2. If it's the first run, you'll be prompted to select a simulator.
+3. The plugin will attempt to guess the correct MCU and frequency from your
+   selected FQBN.
+4. If guessing fails, you will be prompted to select an MCU from the ones
+   supported by the simulator and input the target frequency.
+5. These settings are saved in `simulation.json` inside your build directory.
+
+Smart Recompilation:~ 
+The simulation command automatically checks if your code needs to be
+recompiled by comparing file timestamps and the build receipt.
 
 ===============================================================================
 vim:ft=help:et:ts=2:sw=2:sts=2:norl

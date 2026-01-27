@@ -59,6 +59,8 @@ This plugin is designed to work hand-in-hand with `arduino-cli`, and it uses `sk
 *   **Automatic Initialization:** When you open an Arduino sketch (`.ino`), the plugin checks for a `sketch.yaml` file. If one does not exist, it creates a default one to ensure the Language Server can attach immediately.
 *   **Persistent Settings:** Commands `:ArduinoSelectBoard`, `:ArduinoSelectProgrammer` and `:ArduinoSelectPort` update the `sketch.yaml` file directly. This ensures your settings persist across sessions and are compatible with the CLI. The command `:ArduinoSetBaud`, however, can only persist its settings for the current session.
 *   **LSP Integration:** When you change the board or port, the plugin automatically restarts the `arduino_language_server` to ensure diagnostics and completions are correct for your hardware.
+*   **Smart Compilation:** To save time, the plugin automatically detects if a full recompile is needed by checking file timestamps and the board configuration (FQBN) used for the previous build. If nothing has changed, it skips compilation and proceeds directly to upload or simulation.
+*   **Auto-Save Prompt:** Before any build or upload, the plugin checks if your buffer has unsaved changes and prompts you to save, ensuring you always flash the latest code.
 
 ## Commands
 
@@ -71,11 +73,20 @@ This plugin is designed to work hand-in-hand with `arduino-cli`, and it uses `sk
 | `ArduinoUpload` | | Compile and upload the sketch. |
 | `ArduinoMonitor` | | Open a serial monitor buffer. |
 | `ArduinoUploadAndMonitor` | | Upload and then open serial monitor. |
+| `ArduinoRunSimulation` | | Launch a hardware simulator (e.g. SimAVR). |
+| `ArduinoSelectSimulator` | | Choose which simulator to use. |
+| `ArduinoResetSimulation` | | Reset simulation parameters (MCU, frequency). |
 | `ArduinoLibraryManager` | | Manage libraries (install/update/remove). |
 | `ArduinoCoreManager` | | Manage cores (install/update/remove). |
 | `ArduinoGetInfo` | | Display current configuration info. |
 | `ArduinoSetBaud` | | Set the baud rate used by the serial monitor. |
 | `ArduinoCheckLogs` | | Show the log buffer. |
+
+## Simulation
+
+This plugin includes a framework for hardware simulation, with built-in support for **SimAVR**. 
+
+When you run `:ArduinoRunSimulation`, the plugin attempts to guess the correct MCU and frequency from your board configuration. If it can't, it will prompt you to select them. These settings are saved in your build directory for future runs.
 
 ## Status Line / Lualine
 
