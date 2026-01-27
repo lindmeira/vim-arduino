@@ -189,10 +189,14 @@ local function select_mcu_and_freq(callback)
   handle:close()
 
   local mcus = {}
-  for line in result:gmatch '[^\n]+' do
-    local mcu = line:match '^%s*(%S+)'
-    if mcu then
-      table.insert(mcus, { label = mcu, value = mcu })
+  local is_first_line = true
+  for line in result:gmatch '[^\r\n]+' do
+    if is_first_line then
+      is_first_line = false
+    else
+      for mcu in line:gmatch '%S+' do
+        table.insert(mcus, { label = mcu, value = mcu })
+      end
     end
   end
 
