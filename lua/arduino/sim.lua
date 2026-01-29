@@ -2,6 +2,7 @@ local util = require 'arduino.util'
 local config = require 'arduino.config'
 local cli = require 'arduino.cli'
 local term = require 'arduino.term'
+local build_receipt = require 'arduino.build_receipt'
 
 local M = {}
 
@@ -182,6 +183,9 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
       local elf_time = vim.fn.getftime(elf_file)
       if sketch_time > elf_time then
         needs_compile = true
+      elseif not build_receipt.matches('debug') then
+        -- Force compile if the existing binary is not a debug build
+        needs_compile = true
       end
     end
   end
@@ -196,27 +200,18 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
   end
 
   if needs_compile then
-    util.notify('Compiling sketch...', vim.log.levels.INFO)
-    local cmd = cli.get_compile_command()
+    util.notify('Compiling sketch (debug flags for simulation)...', vim.log.levels.INFO)
+    local debug_args = config.options.simulation_build_args
+    local cmd = cli.get_compile_command(debug_args)
     term.run_silent(cmd, 'Compilation', function()
       -- We need to save the receipt here to keep it in sync with uploads
       -- Accessing internal function from another module is tricky without export
       -- We'll just call the same logic or if possible require init (careful of circular deps)
       -- Simplest: Re-implement saving receipt logic here or export it in init.lua
       -- Let's try to do it properly by duplicating minimal logic to avoid circular dependency
-      local receipt_path = cli.get_build_path() .. '/build_receipt.json'
-      local fqbn = config.options.board
-      -- Prefer FQBN from sketch.yaml if available, just like init.lua
-      local sketch_cpu = util.get_sketch_config()
-      if sketch_cpu and sketch_cpu.fqbn then
-        fqbn = sketch_cpu.fqbn
-      end
-      
-      local f = io.open(receipt_path, 'w')
-      if f then
-        f:write(vim.json.encode({ fqbn = fqbn }))
-        f:close()
-      end
+       -- Save receipt marking this as a debug build
+       local build_receipt = require('arduino.build_receipt')
+       build_receipt.write(nil, 'debug')
       
       run()
     end)
@@ -368,4 +363,3 @@ function M.reset_simulation()
 end
 
 return M
-

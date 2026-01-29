@@ -18,7 +18,7 @@ M.VALID_BAUD_RATES = {
   [2000000] = true,
 }
 
-M.defaults = {
+  M.defaults = {
   -- Set to false to disable emoji in fallback library/core manager lists
   manager_emoji = true,
 
@@ -26,6 +26,8 @@ M.defaults = {
   programmer = '',
   args = '--verbose-upload',
   cli_args = '-v',
+  -- Flags used when compiling for simulation (debug symbols, lower opt, disable LTO)
+  simulation_build_args = "--build-property compiler.c.extra_flags=-g --build-property compiler.cpp.extra_flags=-g --build-property build.extra_flags='-Og -fno-lto'",
   serial_cmd = 'arduino-cli',
   build_path = '{project_dir}/build',
   serial_baud = 9600,

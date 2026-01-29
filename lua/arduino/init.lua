@@ -5,6 +5,7 @@ local core = require 'arduino.core'
 local util = require 'arduino.util'
 local cli = require 'arduino.cli'
 local lib = require 'arduino.lib'
+local build_receipt = require 'arduino.build_receipt'
 
 local M = {}
 
@@ -270,53 +271,16 @@ local function check_save()
   return true
 end
 
-local function get_receipt_path()
-  local build_path = cli.get_build_path()
-  if not build_path then return nil end
-  return build_path .. '/build_receipt.json'
-end
-
 local function save_build_receipt()
-  local path = get_receipt_path()
-  if not path then return end
-  
-  -- Ensure build dir exists (it should after compile)
-  vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
-
-  -- Resolve FQBN exactly as cli.lua does (prefer sketch config)
+  -- Save current fqbn as a release build receipt
   local sketch_cpu = util.get_sketch_config()
   local fqbn = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
-  
-  local data = { fqbn = fqbn }
-  
-  local f = io.open(path, 'w')
-  if f then
-    f:write(vim.json.encode(data))
-    f:close()
-  end
+  build_receipt.write(fqbn, 'release')
 end
 
 local function check_build_receipt()
-  local path = get_receipt_path()
-  if not path or vim.fn.filereadable(path) == 0 then
-    return false
-  end
-  
-  local f = io.open(path, 'r')
-  if not f then return false end
-  local content = f:read('*a')
-  f:close()
-  
-  local ok, data = pcall(vim.json.decode, content)
-  if not ok or not data or not data.fqbn then
-    return false
-  end
-  
-  -- Resolve current target FQBN
-  local sketch_cpu = util.get_sketch_config()
-  local current_fqbn = (sketch_cpu and sketch_cpu.fqbn) or config.options.board
-
-  return data.fqbn == current_fqbn
+  -- Check that an existing receipt matches current fqbn and is a release build
+  return build_receipt.matches('release')
 end
 
 function M.verify()
@@ -354,6 +318,7 @@ local function perform_smart_upload(callback)
     -- Wrap callback to save receipt on success
     local original_callback = callback
     callback = function()
+      -- Uploads should produce release builds
       save_build_receipt()
       if original_callback then original_callback() end
     end
