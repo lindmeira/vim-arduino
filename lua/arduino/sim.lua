@@ -249,8 +249,8 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
       local elf_time = vim.fn.getftime(elf_file)
       if sketch_time > elf_time then
         needs_compile = true
-      elseif not build_receipt.matches 'debug' then
-        -- Force compile if the existing binary is not a debug build
+      elseif not build_receipt.matches(nil) then
+        -- Ensure we have a valid receipt for the current FQBN (mode agnostic)
         needs_compile = true
       end
     end
@@ -267,12 +267,13 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
 
   if needs_compile then
     util.notify('Compiling sketch for simulation...', vim.log.levels.INFO)
-    local debug_args = config.options.simulation_build_args
-    local cmd = cli.get_compile_command(debug_args)
+    -- Use standard compile command (release mode / no debug flags forced)
+    -- This matches the agnostic behavior requested
+    local cmd = cli.get_compile_command(nil)
     term.run_silent(cmd, 'Compilation', function()
-      -- Save receipt marking this as a debug build
+      -- Save receipt (defaults to release if not specified, which matches standard compile)
       local build_receipt = require 'arduino.build_receipt'
-      build_receipt.write(nil, 'debug')
+      build_receipt.write(nil, 'release')
 
       run()
     end)
@@ -391,7 +392,7 @@ function M.simulate_and_debug()
   end
 
   if needs_compile then
-    util.notify('Compiling sketch (debug flags)...', vim.log.levels.INFO)
+    util.notify('Compiling for debug...', vim.log.levels.INFO)
     local debug_args = config.options.simulation_build_args
     local cmd = cli.get_compile_command(debug_args)
     term.run_silent(cmd, 'Compilation', function()
