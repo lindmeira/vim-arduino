@@ -49,7 +49,7 @@ local FQBN_PATTERNS = {
 }
 
 local function read_simulation_config()
-  return storage.get('simulation')
+  return storage.get 'simulation'
 end
 
 local function save_simulation_config(mcu, freq, fqbn, simulator)
@@ -66,7 +66,7 @@ local function save_simulation_config(mcu, freq, fqbn, simulator)
 end
 
 local function launch_simavr(mcu, freq, elf_path)
-  local cmd = string.format('simavr --mcu %s --freq %s "%s"', mcu, freq, elf_path)
+  local cmd = string.format('simavr --gdb --mcu %s --freq %s "%s"', mcu, freq, elf_path)
 
   -- Reuse terminal window logic (similar to init.lua serial)
   local buf = vim.api.nvim_create_buf(false, true)
@@ -147,7 +147,7 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
       local elf_time = vim.fn.getftime(elf_file)
       if sketch_time > elf_time then
         needs_compile = true
-      elseif not build_receipt.matches('debug') then
+      elseif not build_receipt.matches 'debug' then
         -- Force compile if the existing binary is not a debug build
         needs_compile = true
       end
@@ -164,7 +164,7 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
   end
 
   if needs_compile then
-    util.notify('Compiling sketch (debug flags for simulation)...', vim.log.levels.INFO)
+    util.notify('Compiling sketch for simulation...', vim.log.levels.INFO)
     local debug_args = config.options.simulation_build_args
     local cmd = cli.get_compile_command(debug_args)
     term.run_silent(cmd, 'Compilation', function()
@@ -173,10 +173,10 @@ local function ensure_elf_and_run(mcu, freq, force_compile)
       -- We'll just call the same logic or if possible require init (careful of circular deps)
       -- Simplest: Re-implement saving receipt logic here or export it in init.lua
       -- Let's try to do it properly by duplicating minimal logic to avoid circular dependency
-       -- Save receipt marking this as a debug build
-       local build_receipt = require('arduino.build_receipt')
-       build_receipt.write(nil, 'debug')
-      
+      -- Save receipt marking this as a debug build
+      local build_receipt = require 'arduino.build_receipt'
+      build_receipt.write(nil, 'debug')
+
       run()
     end)
   else
@@ -206,7 +206,7 @@ local function select_mcu_and_freq(callback)
   end
 
   if #mcus == 0 then
-    util.notify('No MCUs found from simavr.', vim.log.levels.ERROR)
+    util.notify('No MCUs found from SimAVR.', vim.log.levels.ERROR)
     return
   end
 
@@ -296,7 +296,9 @@ local function check_save()
 end
 
 function M.run()
-  if not check_save() then return end
+  if not check_save() then
+    return
+  end
   local conf = read_simulation_config()
   local sim = conf and conf.simulator
 
@@ -317,8 +319,11 @@ function M.select_simulator()
 end
 
 function M.reset_simulation()
-  require('arduino.storage').update('simulation', nil)
-  util.notify 'Simulation configuration reset.'
+  local current = storage.get 'simulation' or {}
+  -- Keep the simulator choice, wipe specific board params
+  local new_data = { simulator = current.simulator }
+  storage.update('simulation', new_data)
+  util.notify 'Simulation config (MCU/Freq) reset.'
 end
 
 return M

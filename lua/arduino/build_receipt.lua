@@ -16,7 +16,20 @@ function M.write(fqbn, mode)
 
   local final_mode = mode or 'release'
 
-  storage.update('build', { fqbn = final_fqbn, build_mode = final_mode })
+  local current_data = storage.load()
+  local updates = { fqbn = final_fqbn, build_mode = final_mode }
+
+  -- Smart Cleanup: If we are building for a different board than the simulation config expects,
+  -- invalidate the board-specific simulation params (MCU/Freq) but keep the simulator engine preference.
+  local sim_config = current_data.simulation
+  if sim_config and sim_config.fqbn and sim_config.fqbn ~= final_fqbn then
+    sim_config.mcu = nil
+    sim_config.freq = nil
+    sim_config.fqbn = nil
+    storage.update('simulation', sim_config)
+  end
+
+  storage.update('build', updates)
 end
 
 -- Check whether current receipt matches current sketch FQBN and (optionally) desired mode
