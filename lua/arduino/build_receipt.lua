@@ -1,13 +1,17 @@
-local cli = require 'arduino.cli'
 local util = require 'arduino.util'
 local config = require 'arduino.config'
 
 local M = {}
 
 local function get_path()
-  local build_path = cli.get_build_path()
-  if not build_path then return nil end
-  return build_path .. '/build_receipt.json'
+  local sketch_file, _ = util.find_sketch_config(vim.fn.expand '%:p:h')
+  local dir
+  if sketch_file then
+    dir = vim.fn.fnamemodify(sketch_file, ':h')
+  else
+    dir = vim.fn.expand '%:p:h'
+  end
+  return dir .. '/.build_receipt.json'
 end
 
 function M.read()

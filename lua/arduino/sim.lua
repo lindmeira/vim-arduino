@@ -48,11 +48,14 @@ local FQBN_PATTERNS = {
 }
 
 local function get_config_path()
-  local build_path = cli.get_build_path()
-  if not build_path then
-    return nil
+  local sketch_file, _ = util.find_sketch_config(vim.fn.expand '%:p:h')
+  local dir
+  if sketch_file then
+    dir = vim.fn.fnamemodify(sketch_file, ':h')
+  else
+    dir = vim.fn.expand '%:p:h'
   end
-  return build_path .. '/simulation.json'
+  return dir .. '/.simulation.json'
 end
 
 local function read_simulation_config()
