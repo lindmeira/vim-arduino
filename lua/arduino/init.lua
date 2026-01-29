@@ -314,6 +314,7 @@ local function perform_smart_upload(callback)
 
   local cmd
   if needs_compile then
+    util.notify('Compiling sketch...', vim.log.levels.INFO)
     cmd = cli.get_upload_command()
     -- Wrap callback to save receipt on success
     local original_callback = callback
