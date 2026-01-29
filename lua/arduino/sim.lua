@@ -3,6 +3,7 @@ local config = require 'arduino.config'
 local cli = require 'arduino.cli'
 local term = require 'arduino.term'
 local build_receipt = require 'arduino.build_receipt'
+local storage = require 'arduino.storage'
 
 local M = {}
 
@@ -47,47 +48,11 @@ local FQBN_PATTERNS = {
   { pattern = 'ATTinyCore:avr:attinyx5:chip=25,clock=1internal', mcu = 'attiny25', freq = '1000000' },
 }
 
-local function get_config_path()
-  local sketch_file, _ = util.find_sketch_config(vim.fn.expand '%:p:h')
-  local dir
-  if sketch_file then
-    dir = vim.fn.fnamemodify(sketch_file, ':h')
-  else
-    dir = vim.fn.expand '%:p:h'
-  end
-  return dir .. '/.simulation.json'
-end
-
 local function read_simulation_config()
-  local path = get_config_path()
-  if not path or vim.fn.filereadable(path) == 0 then
-    return nil
-  end
-
-  local f = io.open(path, 'r')
-  if not f then
-    return nil
-  end
-
-  local content = f:read '*a'
-  f:close()
-
-  local ok, data = pcall(vim.json.decode, content)
-  if ok then
-    return data
-  end
-  return nil
+  return storage.get('simulation')
 end
 
 local function save_simulation_config(mcu, freq, fqbn, simulator)
-  local path = get_config_path()
-  if not path then
-    return
-  end
-
-  -- Ensure build dir exists
-  vim.fn.mkdir(vim.fn.fnamemodify(path, ':h'), 'p')
-
   local current = read_simulation_config() or {}
 
   local data = {
@@ -97,11 +62,7 @@ local function save_simulation_config(mcu, freq, fqbn, simulator)
     simulator = simulator or current.simulator,
   }
 
-  local f = io.open(path, 'w')
-  if f then
-    f:write(vim.json.encode(data))
-    f:close()
-  end
+  storage.update('simulation', data)
 end
 
 local function launch_simavr(mcu, freq, elf_path)
@@ -356,13 +317,8 @@ function M.select_simulator()
 end
 
 function M.reset_simulation()
-  local path = get_config_path()
-  if path and vim.fn.filereadable(path) == 1 then
-    os.remove(path)
-    util.notify 'Simulation configuration reset.'
-  else
-    util.notify 'No simulation configuration found to reset.'
-  end
+  require('arduino.storage').update('simulation', nil)
+  util.notify 'Simulation configuration reset.'
 end
 
 return M
