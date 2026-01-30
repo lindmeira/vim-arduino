@@ -846,6 +846,15 @@ function M.core_manager_fallback()
   end)
 end
 
+function M.add_third_party_core()
+  vim.ui.input({ prompt = 'Enter Third Party Core URL(s) (space separated): ' }, function(input)
+    if not input or input == '' then
+      return
+    end
+    require('arduino.core').add_third_party_urls(input)
+  end)
+end
+
 function M.core_manager()
   if not config.options.use_telescope then
     return M.core_manager_fallback()

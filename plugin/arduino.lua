@@ -47,6 +47,10 @@ vim.api.nvim_create_user_command('ArduinoCoreManager', function()
   arduino.core_manager()
 end, {})
 
+vim.api.nvim_create_user_command('ArduinoThirdPartyCore', function()
+  arduino.add_third_party_core()
+end, {})
+
 vim.api.nvim_create_user_command('ArduinoGetInfo', function()
   arduino.get_info()
 end, {})
