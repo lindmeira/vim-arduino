@@ -1,9 +1,9 @@
-local util = require 'arduino.util'
-local config = require 'arduino.config'
 local cli = require 'arduino.cli'
+local util = require 'arduino.util'
 local term = require 'arduino.term'
-local build_receipt = require 'arduino.build_receipt'
+local config = require 'arduino.config'
 local storage = require 'arduino.storage'
+local build_receipt = require 'arduino.build_receipt'
 
 local M = {}
 
@@ -16,11 +16,11 @@ local SIMULATORS = {
 -- Frequency is usually standard for these boards but we'll verify
 local FQBN_MAP = {
   ['arduino:avr:uno'] = { mcu = 'atmega328p', freq = 16000000 },
+  ['arduino:avr:yun'] = { mcu = 'atmega32u4', freq = 16000000 },
   ['arduino:avr:nano'] = { mcu = 'atmega328p', freq = 16000000 },
   ['arduino:avr:mega'] = { mcu = 'atmega2560', freq = 16000000 },
-  ['arduino:avr:leonardo'] = { mcu = 'atmega32u4', freq = 16000000 },
   ['arduino:avr:micro'] = { mcu = 'atmega32u4', freq = 16000000 },
-  ['arduino:avr:yun'] = { mcu = 'atmega32u4', freq = 16000000 },
+  ['arduino:avr:leonardo'] = { mcu = 'atmega32u4', freq = 16000000 },
 }
 
 local FQBN_PATTERNS = {
