@@ -294,9 +294,9 @@ Log error, exit with code 0
 Invalid response?
     │
     ▼
-Log error, exit with code 1
+Log error, exit with code 0
     │
-    └─> Workflow fails (visible in Actions)
+    └─> Workflow completes without update (graceful degrade)
 ```
 
 ## Monitoring & Debugging
