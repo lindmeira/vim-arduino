@@ -62,9 +62,10 @@ If you prefer not to use AI or don't want to set up API keys:
 
 The workflow is designed to prevent infinite loops through multiple safeguards:
 
-1. **Path Exclusion**: `paths-ignore` prevents triggering when README.md changes
-2. **Skip CI Tag**: Commits include `[skip ci]` to prevent re-triggering
-3. **Code Change Detection**: README updates only run when actual code files change (the workflow may still run for other pushes and exit without updating the README)
+1. **Path Exclusion**: `paths-ignore` prevents triggering when ONLY README.md changes
+2. **README Detection**: Explicit check skips automatic updates when README.md is in changed files (preserves manual edits even in mixed commits)
+3. **Skip CI Tag**: Commits include `[skip ci]` to prevent re-triggering
+4. **Code Change Detection**: README updates only run when actual code files change (the workflow may still run for other pushes and exit without updating the README)
 
 ## Customization
 

@@ -46,6 +46,13 @@ jobs:
       - name: Check if code files changed
         id: check-changes
         run: |
+          # Skip if README.md was manually changed (manual edits take precedence)
+          if grep -qsE '^README\.md$' changed_files.txt; then
+            echo "code_changed=false" >> $GITHUB_OUTPUT
+            echo "README.md was manually changed, skipping automatic update to preserve manual edits"
+            exit 0
+          fi
+          
           # Check if any Lua files or plugin structure changed
           if [ -s changed_files.txt ] && grep -qsE '\.(lua|vim)$|^plugin/|^ftplugin/|^ftdetect/|^syntax/' changed_files.txt; then
             echo "code_changed=true" >> $GITHUB_OUTPUT

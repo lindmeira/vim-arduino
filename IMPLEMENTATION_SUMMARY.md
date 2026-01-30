@@ -44,9 +44,10 @@ The workflow only triggers README updates when actual code files change:
 
 ### Loop Prevention
 Multiple safeguards prevent infinite update loops:
-1. **paths-ignore**: README.md changes don't trigger the workflow
-2. **[skip ci] tag**: Automated commits skip CI/CD
-3. **Code-only detection**: Only code changes trigger updates
+1. **paths-ignore**: README.md-only changes don't trigger the workflow
+2. **README detection**: Skips updates when README.md is in changed files (preserves manual edits)
+3. **[skip ci] tag**: Automated commits skip CI/CD
+4. **Code-only detection**: Only code changes trigger updates
 
 ### AI-Powered Updates
 Uses Claude 3.5 Sonnet to:
@@ -156,9 +157,8 @@ Developer → Push README.md to master
 ```
 Developer → Push README.md + Lua file to master
          → Workflow triggers (paths-ignore only skips README-only commits)
-         → Detects code change
-         → Calls Claude API and updates README (may override manual edits)
-         → Commits with [skip ci] and pushes to master
+         → Detects README.md in changed files
+         → Skips automatic update to preserve manual edits
          → Done (no re-trigger)
 ```
 

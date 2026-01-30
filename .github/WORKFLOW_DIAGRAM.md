@@ -145,7 +145,7 @@ Output:
   • Workflow runs but skips update
 ```
 
-### Scenario D: Mixed Change (No Update)
+### Scenario D: Mixed Change (Manual README Takes Precedence)
 
 ```
 Input:
@@ -153,12 +153,14 @@ Input:
   README changed: Yes
 
 Flow:
-  1. Workflow does NOT trigger (paths-ignore)
-  2. Manual README takes precedence
+  1. Workflow triggers (paths-ignore doesn't block mixed commits)
+  2. Detects README.md in changed files
+  3. Skips automatic update to preserve manual edits
+  4. Workflow exits early
   
 Output:
   • 1 commit: code + README changes
-  • No workflow run (developer handled README)
+  • Workflow runs but skips update (manual README preserved)
 ```
 
 ## Decision Tree
@@ -168,25 +170,40 @@ Output:
                           │
                           ▼
               ┌───────────────────────┐
-              │ README.md in changes? │
+              │ README.md ONLY in     │
+              │ changes?              │
               └───────────────────────┘
                      │           │
-                  Yes│           │No
+                  Yes│           │No (or mixed)
                      │           │
                      ▼           ▼
               ┌──────────┐  ┌────────────────┐
-              │SKIP      │  │ Code files in  │
-              │(paths-   │  │ changes?       │
+              │SKIP      │  │ Workflow runs  │
+              │(paths-   │  │                │
               │ignore)   │  └────────────────┘
-              └──────────┘       │        │
-                              Yes│        │No
-                                 │        │
-                                 ▼        ▼
-                          ┌──────────┐  ┌──────────┐
-                          │UPDATE    │  │SKIP      │
-                          │README    │  │(no code  │
-                          │with AI   │  │changes)  │
-                          └──────────┘  └──────────┘
+              └──────────┘         │
+                                   ▼
+                          ┌────────────────┐
+                          │ README.md in   │
+                          │ changed files? │
+                          └────────────────┘
+                               │        │
+                            Yes│        │No
+                               │        │
+                               ▼        ▼
+                        ┌──────────┐  ┌────────────────┐
+                        │SKIP      │  │ Code files in  │
+                        │(manual   │  │ changes?       │
+                        │README)   │  └────────────────┘
+                        └──────────┘       │        │
+                                        Yes│        │No
+                                           │        │
+                                           ▼        ▼
+                                    ┌──────────┐  ┌──────────┐
+                                    │UPDATE    │  │SKIP      │
+                                    │README    │  │(no code  │
+                                    │with AI   │  │changes)  │
+                                    └──────────┘  └──────────┘
 ```
 
 ## Infinite Loop Prevention
@@ -199,15 +216,23 @@ Output:
      - 'README.md'
      - '.github/workflows/update-readme.yml'
    ```
-   Prevents triggering when README or workflow changes
+   Prevents triggering when ONLY README or workflow changes
 
-2. **[skip ci] in commit message**
+2. **README.md detection check**
+   ```bash
+   if grep -qsE '^README\.md$' changed_files.txt; then
+     # Skip update to preserve manual edits
+   fi
+   ```
+   Skips automatic update when README.md is in changed files (even in mixed commits)
+
+3. **[skip ci] in commit message**
    ```
    git commit -m "docs: auto-update README ... [skip ci]"
    ```
    Prevents CI/CD from re-running
 
-3. **Code-only detection**
+4. **Code-only detection**
    ```bash
    grep -qE '\.(lua|vim)$|^plugin/|...' changed_files.txt
    ```
