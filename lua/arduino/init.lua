@@ -226,11 +226,13 @@ end
 
 local function check_build_receipt()
   -- Check that an existing receipt matches current fqbn and is a release build
-  return build_receipt.matches('release')
+  return build_receipt.matches 'release'
 end
 
 function M.verify()
-  if not check_save() then return end
+  if not check_save() then
+    return
+  end
   local cmd = cli.get_compile_command()
   term.run_silent(cmd, 'Compilation', function()
     save_build_receipt()
@@ -238,7 +240,9 @@ function M.verify()
 end
 
 local function perform_smart_upload(callback)
-  if not check_save() then return end
+  if not check_save() then
+    return
+  end
 
   local build_path = cli.get_build_path()
   local needs_compile = true
@@ -267,7 +271,9 @@ local function perform_smart_upload(callback)
     callback = function()
       -- Uploads should produce release builds
       save_build_receipt()
-      if original_callback then original_callback() end
+      if original_callback then
+        original_callback()
+      end
     end
   else
     util.notify('Binary up-to-date, skipping compilation.', vim.log.levels.INFO)
@@ -401,9 +407,39 @@ function M.check_logs()
   local chan = vim.api.nvim_open_term(buf, {})
   vim.api.nvim_chan_send(chan, table.concat(log_data, '\r\n'))
 
+  -- Subscribe to log updates for real-time display
+  local log_module = require 'arduino.log'
+  local sub_id = log_module.subscribe(function(new_lines)
+    if new_lines then
+      -- Append new lines (jobstart usually splits chunks by newline, so join with \r\n)
+      -- We add a trailing \r\n because table.concat won't add it after the last line,
+      -- and we want to ensure the next chunk starts on a new line if this chunk ended with one.
+      -- However, log.add filters the trailing empty string from jobstart.
+      -- So we usually just need to join.
+      vim.api.nvim_chan_send(chan, '\r\n' .. table.concat(new_lines, '\r\n'))
+      -- Scroll to bottom (simple attempt)
+      if vim.api.nvim_buf_is_valid(buf) and vim.fn.bufwinid(buf) ~= -1 then
+        vim.api.nvim_win_set_cursor(vim.fn.bufwinid(buf), { vim.api.nvim_buf_line_count(buf), 0 })
+      end
+    else
+      -- Clear (nil received)
+      -- Term buffers are hard to clear via API without resetting.
+      -- Simplest is to just print a marker or do nothing.
+      -- vim.api.nvim_chan_send(chan, '\r\n--- Logs Cleared ---\r\n')
+    end
+  end)
+
   -- Buffer options
   vim.bo[buf].filetype = 'arduino_log'
   vim.bo[buf].bufhidden = 'wipe'
+
+  -- Unsubscribe when buffer is closed
+  vim.api.nvim_create_autocmd('BufUnload', {
+    buffer = buf,
+    callback = function()
+      log_module.unsubscribe(sub_id)
+    end,
+  })
 
   -- Keymap to close the window
   vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, silent = true })
