@@ -1,0 +1,188 @@
+name: Auto-Update README
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'README.md'
+      - '.github/workflows/update-readme.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "Getting changed files from last commit..."
+          git diff --name-only HEAD^ HEAD > changed_files.txt
+          cat changed_files.txt
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          cat changed_files.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check if code files changed
+        id: check-changes
+        run: |
+          # Check if any Lua files or plugin structure changed
+          if grep -qE '\.(lua|vim)$|^plugin/|^ftplugin/|^ftdetect/|^syntax/' changed_files.txt; then
+            echo "code_changed=true" >> $GITHUB_OUTPUT
+            echo "Code files were changed, README update needed"
+          else
+            echo "code_changed=false" >> $GITHUB_OUTPUT
+            echo "No code files changed, skipping README update"
+          fi
+
+      - name: Generate README update prompt
+        if: steps.check-changes.outputs.code_changed == 'true'
+        id: generate-prompt
+        run: |
+          cat > update_prompt.txt << 'PROMPT_EOF'
+          You are a technical documentation writer. Your task is to update the README.md file for the arduino.nvim project based on recent code changes.
+
+          The arduino.nvim project is a Neovim plugin for Arduino development written in Lua. It wraps arduino-cli and provides commands for compiling, uploading, and managing Arduino sketches.
+
+          Please analyze the changed files and update the README.md to:
+          1. Document any new features, commands, or configuration options
+          2. Update descriptions that may have become obsolete
+          3. Refresh examples if the API has changed
+          4. Maintain the existing structure and style of the README
+          5. Keep the documentation concise and user-friendly
+
+          Changed files in this commit:
+          PROMPT_EOF
+          
+          cat changed_files.txt >> update_prompt.txt
+          
+          echo "" >> update_prompt.txt
+          echo "" >> update_prompt.txt
+          echo "Current README.md content:" >> update_prompt.txt
+          cat README.md >> update_prompt.txt
+          
+          echo "" >> update_prompt.txt
+          echo "" >> update_prompt.txt
+          echo "Git diff of changes:" >> update_prompt.txt
+          git diff HEAD^ HEAD -- $(cat changed_files.txt | tr '\n' ' ') >> update_prompt.txt || true
+
+      - name: Update README using AI
+        if: steps.check-changes.outputs.code_changed == 'true'
+        id: update-readme
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Create a Node.js script to call Claude API
+          cat > update_readme.js << 'EOF'
+          const https = require('https');
+          const fs = require('fs');
+
+          const API_KEY = process.env.ANTHROPIC_API_KEY;
+          
+          if (!API_KEY) {
+            console.log("ANTHROPIC_API_KEY not set, skipping README update");
+            process.exit(0);
+          }
+
+          const prompt = fs.readFileSync('update_prompt.txt', 'utf8');
+
+          const data = JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 4096,
+            messages: [{
+              role: "user",
+              content: prompt
+            }],
+            system: "You are a technical documentation expert. Respond with ONLY the updated README.md content. Do not include any explanations, markdown code fences, or additional commentary. Output the raw markdown that should replace the current README.md file."
+          });
+
+          const options = {
+            hostname: 'api.anthropic.com',
+            port: 443,
+            path: '/v1/messages',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': API_KEY,
+              'anthropic-version': '2023-06-01',
+              'Content-Length': data.length
+            }
+          };
+
+          const req = https.request(options, (res) => {
+            let body = '';
+            
+            res.on('data', (chunk) => {
+              body += chunk;
+            });
+            
+            res.on('end', () => {
+              try {
+                const response = JSON.parse(body);
+                if (response.content && response.content[0] && response.content[0].text) {
+                  const updatedReadme = response.content[0].text.trim();
+                  fs.writeFileSync('README_updated.md', updatedReadme);
+                  console.log("README updated successfully");
+                } else {
+                  console.error("Unexpected response format:", body);
+                  process.exit(1);
+                }
+              } catch (e) {
+                console.error("Error parsing response:", e);
+                console.error("Response body:", body);
+                process.exit(1);
+              }
+            });
+          });
+
+          req.on('error', (e) => {
+            console.error("Request error:", e);
+            process.exit(1);
+          });
+
+          req.write(data);
+          req.end();
+          EOF
+
+          node update_readme.js || {
+            echo "API call failed or API key not configured. Skipping README update."
+            echo "readme_updated=false" >> $GITHUB_OUTPUT
+            exit 0
+          }
+
+          if [ -f README_updated.md ]; then
+            mv README_updated.md README.md
+            echo "readme_updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "readme_updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.code_changed == 'true' && steps.update-readme.outputs.readme_updated == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add README.md
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: auto-update README based on code changes [skip ci]"
+            git push
+          fi
