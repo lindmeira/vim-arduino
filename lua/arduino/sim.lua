@@ -433,8 +433,15 @@ local function perform_debug_workflow(mcu, freq)
     end
 
     -- Prepare SimAVR Output Buffer
+    -- cleanup existing buffer if present to avoid E95
+    local existing_buf = vim.fn.bufnr '^SimAVR Output$'
+    if existing_buf ~= -1 then
+      vim.api.nvim_buf_delete(existing_buf, { force = true })
+    end
+
     local sim_buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(sim_buf, 'SimAVR Output')
+    vim.bo[sim_buf].bufhidden = 'wipe'
     local sim_chan = vim.api.nvim_open_term(sim_buf, {})
 
     -- Launch SimAVR with output piping
