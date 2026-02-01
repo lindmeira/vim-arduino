@@ -121,20 +121,36 @@ local function launch_simavr(mcu, freq, elf_path)
 end
 
 -- Start simavr in background with gdb stub enabled on port 1234.
-local function launch_simavr_debug(mcu, freq, elf_path, output_chan)
+local function launch_simavr_debug(mcu, freq, elf_path, output_chan, on_ready)
   -- simavr typically listens on port 1234 when -g is passed
   local port = 1234
+  local ready_triggered = false
 
   local cmd = string.format('simavr --gdb --mcu %s --freq %s "%s"', mcu, freq, elf_path)
 
+  local function check_ready(data)
+    if not ready_triggered and on_ready and data then
+      for _, line in ipairs(data) do
+        if line:match 'listening on port' then
+          ready_triggered = true
+          on_ready()
+          break
+        end
+      end
+    end
+  end
+
   -- Run in background job (not terminal) so we can open a separate gdb terminal
   local job_id = vim.fn.jobstart(cmd, {
+    pty = true,
     on_stdout = function(_, data)
+      check_ready(data)
       if output_chan and data then
         pcall(vim.api.nvim_chan_send, output_chan, table.concat(data, '\r\n'))
       end
     end,
     on_stderr = function(_, data)
+      check_ready(data)
       if output_chan and data then
         pcall(vim.api.nvim_chan_send, output_chan, table.concat(data, '\r\n'))
       end
@@ -176,9 +192,6 @@ local function open_avr_gdb(elf_path, port, layout_opts)
   end
 
   local cmd = string.format('%s -q "%s" -ex "target remote localhost:%d"', gdb, elf_path, port)
-
-  -- Wait a bit for simavr to initialize the GDB stub
-  vim.wait(500)
 
   local buf = vim.api.nvim_create_buf(false, true)
   local width, height, row, col
@@ -450,10 +463,23 @@ local function perform_debug_workflow(mcu, freq)
     end
 
     -- Launch SimAVR with output piping
-    local siminfo = launch_simavr_debug(mcu, freq, final_elf, sim_chan)
+    local sim_ready = false
+    local siminfo = launch_simavr_debug(mcu, freq, final_elf, sim_chan, function()
+      sim_ready = true
+    end)
+
     if not siminfo or not siminfo.job_id then
       util.notify('Failed to start simavr for debugging.', vim.log.levels.ERROR)
       return
+    end
+
+    -- Wait for SimAVR to be ready (listening on port)
+    local ok = vim.wait(2000, function()
+      return sim_ready
+    end, 50)
+
+    if not ok then
+      util.notify('Timed out waiting for SimAVR to be ready. Proceeding anyway...', vim.log.levels.WARN)
     end
 
     -- Calculate Split Layout
