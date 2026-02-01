@@ -146,18 +146,34 @@ local function launch_simavr_debug(mcu, freq, elf_path, output_chan, on_ready, o
     on_stdout = function(_, data)
       check_ready(data)
       if output_chan and data then
-        pcall(vim.api.nvim_chan_send, output_chan, table.concat(data, '\r\n'))
-        if on_output then
-          on_output()
+        local filtered = {}
+        for _, line in ipairs(data) do
+          if not line:match '^avr_gdb_init' and not line:match '^gdb_network_handler' then
+            table.insert(filtered, line)
+          end
+        end
+        if #filtered > 0 then
+          pcall(vim.api.nvim_chan_send, output_chan, table.concat(filtered, '\r\n'))
+          if on_output then
+            on_output()
+          end
         end
       end
     end,
     on_stderr = function(_, data)
       check_ready(data)
       if output_chan and data then
-        pcall(vim.api.nvim_chan_send, output_chan, table.concat(data, '\r\n'))
-        if on_output then
-          on_output()
+        local filtered = {}
+        for _, line in ipairs(data) do
+          if not line:match '^avr_gdb_init' and not line:match '^gdb_network_handler' then
+            table.insert(filtered, line)
+          end
+        end
+        if #filtered > 0 then
+          pcall(vim.api.nvim_chan_send, output_chan, table.concat(filtered, '\r\n'))
+          if on_output then
+            on_output()
+          end
         end
       end
     end,
