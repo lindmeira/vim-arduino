@@ -1,6 +1,7 @@
 local config = require 'arduino.config'
 local util = require 'arduino.util'
 local M = {}
+local tool_path_cache = {}
 
 function M.get_ports(include_cli_discovery)
   local ports = {}
@@ -198,6 +199,11 @@ function M.get_tool_path(tool_name)
     return nil
   end
 
+  local cache_key = board .. '::' .. tool_name
+  if tool_path_cache[cache_key] then
+    return tool_path_cache[cache_key]
+  end
+
   local cmd = 'arduino-cli compile --show-properties -b ' .. board
   local handle = io.popen(cmd)
   if not handle then
@@ -238,6 +244,7 @@ function M.get_tool_path(tool_name)
     local full_path = base_path .. '/' .. tool_name
 
     if vim.fn.executable(full_path) == 1 then
+      tool_path_cache[cache_key] = full_path
       return full_path
     end
 
@@ -246,6 +253,7 @@ function M.get_tool_path(tool_name)
       full_path = full_path .. '.exe'
 
       if vim.fn.executable(full_path) == 1 then
+        tool_path_cache[cache_key] = full_path
         return full_path
       end
     end
