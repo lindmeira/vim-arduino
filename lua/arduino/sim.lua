@@ -196,7 +196,7 @@ local function open_avr_gdb(elf_path, port, layout_opts)
 
   local buf = vim.api.nvim_create_buf(false, true)
   local width, height, row, col
-  
+
   if layout_opts then
     width = layout_opts.width
     height = layout_opts.height
