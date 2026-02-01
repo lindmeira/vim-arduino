@@ -92,6 +92,7 @@ local function launch_simavr(mcu, freq, elf_path)
 
   local killing_sim = false
 
+  ---@diagnostic disable-next-line: deprecated
   local job_id = vim.fn.termopen(cmd, {
     on_exit = function(_, code)
       if code ~= 0 and not killing_sim then
@@ -251,6 +252,7 @@ local function open_avr_gdb(elf_path, port, layout_opts)
   local win = vim.api.nvim_open_win(buf, true, win_opts)
   vim.api.nvim_set_option_value('winhl', 'Normal:ArduinoWindowNormal,FloatBorder:ArduinoWindowBorder,FloatTitle:ArduinoWindowTitle', { win = win })
 
+  ---@diagnostic disable-next-line: deprecated
   local job_id = vim.fn.termopen(cmd)
 
   -- Ensure process is killed when buffer/window is closed
@@ -324,7 +326,6 @@ local function ensure_elf_and_run(mcu, freq)
     local cmd = cli.get_compile_command(nil)
     term.run_silent(cmd, 'Compilation', function()
       -- Save receipt (defaults to release if not specified, which matches standard compile)
-      local build_receipt = require 'arduino.build_receipt'
       build_receipt.write(nil, 'release')
 
       run()
@@ -487,7 +488,7 @@ local function perform_debug_workflow(mcu, freq)
     end
 
     local function on_output()
-      if sim_win and vim.api.nvim_win_is_valid(sim_win) then
+      if sim_win and vim.api.nvim_win_is_valid(sim_win) and sim_buf then
         local count = vim.api.nvim_buf_line_count(sim_buf)
         vim.api.nvim_win_set_cursor(sim_win, { count, 0 })
       end
