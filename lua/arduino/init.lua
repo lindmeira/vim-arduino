@@ -501,6 +501,152 @@ function M.set_baud(baud, is_auto)
   util.notify(prefix .. b)
 end
 
+-- Shared fetch function for both Telescope and fallback manager
+local function fetch_library_data(callback)
+  lib.search(function(search_data)
+    if not search_data or not search_data.libraries then
+      util.notify('Failed to load libraries.', vim.log.levels.ERROR)
+      callback(nil)
+      return
+    end
+    lib.list_installed(function(installed_data)
+      local installed_map = {}
+      if installed_data and installed_data.installed_libraries then
+        for _, l in ipairs(installed_data.installed_libraries) do
+          if l.library and l.library.name then
+            installed_map[l.library.name] = l.library.version
+          end
+        end
+      end
+      lib.list_outdated(function(outdated_data)
+        local outdated_map = {}
+        if outdated_data and outdated_data.libraries then
+          for _, l in ipairs(outdated_data.libraries) do
+            if l.library and l.library.name then
+              outdated_map[l.library.name] = l.release and l.release.version or 'unknown'
+            end
+          end
+        end
+        local results = {}
+        for _, item in ipairs(search_data.libraries) do
+          local name = item.name
+          local status_icon = ''
+          local version_info = ''
+          local ordinal_prefix = 'z'
+
+          if installed_map[name] then
+            status_icon = '✓'
+            version_info = ' [' .. installed_map[name] .. ']'
+            ordinal_prefix = 'm' -- Installed
+          end
+
+          if outdated_map[name] then
+            status_icon = '↑'
+            version_info = ' [Update: ' .. outdated_map[name] .. ']'
+            ordinal_prefix = 'a' -- Outdated (top priority)
+          end
+
+          if name then
+            table.insert(results, {
+              name = name,
+              status_icon = status_icon,
+              version_info = version_info,
+              installed = installed_map[name] ~= nil,
+              outdated = outdated_map[name] ~= nil,
+              ordinal = ordinal_prefix .. ' ' .. name,
+              details = item,
+            })
+          end
+        end
+        callback(results)
+      end)
+    end)
+  end)
+end
+
+local function fetch_core_data(callback)
+  core.search(function(search_data)
+    if not search_data then
+      util.notify('Failed to load cores.', vim.log.levels.ERROR)
+      callback(nil)
+      return
+    end
+
+    -- Normalize search_data (usually a list of objects)
+    local search_list = search_data
+    if search_data.platforms then
+      search_list = search_data.platforms
+    end
+
+    core.list_installed(function(installed_data)
+      local installed_map = {}
+      if installed_data then
+        local list = installed_data
+        if installed_data.platforms then
+          list = installed_data.platforms
+        end
+        for _, c in ipairs(list) do
+          if c.id then
+            installed_map[c.id] = c.installed_version or 'installed'
+          end
+        end
+      end
+
+      core.list_outdated(function(outdated_data)
+        local outdated_map = {}
+        if outdated_data and outdated_data.platforms then
+          for _, p in ipairs(outdated_data.platforms) do
+            if p.id then
+              outdated_map[p.id] = p.latest or 'unknown'
+            end
+          end
+        end
+
+        local results = {}
+        for _, item in ipairs(search_list) do
+          local id = item.id
+          local latest_ver = item.latest_version or ''
+          local name = id
+          if item.releases and latest_ver ~= '' and item.releases[latest_ver] then
+            name = item.releases[latest_ver].name or id
+          end
+
+          local status_icon = ''
+          local version_info = ''
+          local ordinal_prefix = 'z'
+
+          if installed_map[id] then
+            status_icon = '✓'
+            version_info = ' [' .. installed_map[id] .. ']'
+            ordinal_prefix = 'm'
+          end
+          if outdated_map[id] then
+            status_icon = '↑'
+            version_info = ' [Update: ' .. outdated_map[id] .. ']'
+            ordinal_prefix = 'a'
+          end
+
+          if id then
+            table.insert(results, {
+              id = id,
+              name = id, -- Use ID as name for compatibility with Telescope actions
+              display_name = name,
+              latest = latest_ver,
+              status_icon = status_icon,
+              version_info = version_info,
+              installed = installed_map[id] ~= nil,
+              outdated = outdated_map[id] ~= nil,
+              ordinal = ordinal_prefix .. ' ' .. name,
+              details = item,
+            })
+          end
+        end
+        callback(results)
+      end)
+    end)
+  end)
+end
+
 local function library_manager_telescope()
   if not config.options.use_telescope then
     util.notify('Library Manager requires Telescope support enabled.', vim.log.levels.WARN)
@@ -514,72 +660,7 @@ local function library_manager_telescope()
 
   util.notify('Loading library data...', vim.log.levels.INFO)
 
-  local function fetch_data(callback)
-    lib.search(function(search_data)
-      if not search_data or not search_data.libraries then
-        util.notify('Failed to load libraries.', vim.log.levels.ERROR)
-        callback(nil)
-        return
-      end
-
-      lib.list_installed(function(installed_data)
-        local installed_map = {}
-        if installed_data and installed_data.installed_libraries then
-          for _, l in ipairs(installed_data.installed_libraries) do
-            if l.library and l.library.name then
-              installed_map[l.library.name] = l.library.version
-            end
-          end
-        end
-
-        lib.list_outdated(function(outdated_data)
-          local outdated_map = {}
-          if outdated_data and outdated_data.libraries then
-            for _, l in ipairs(outdated_data.libraries) do
-              if l.library and l.library.name then
-                outdated_map[l.library.name] = l.release and l.release.version or 'unknown'
-              end
-            end
-          end
-
-          local results = {}
-          for _, item in ipairs(search_data.libraries) do
-            local name = item.name
-            local status_icon = ''
-            local version_info = ''
-            local ordinal_prefix = 'z'
-
-            if installed_map[name] then
-              status_icon = '✓'
-              version_info = ' [' .. installed_map[name] .. ']'
-              ordinal_prefix = 'm' -- Installed
-            end
-
-            if outdated_map[name] then
-              status_icon = '↑'
-              version_info = ' [Update: ' .. outdated_map[name] .. ']'
-              ordinal_prefix = 'a' -- Outdated (top priority)
-            end
-
-            if name then
-              table.insert(results, {
-                name = name,
-                status_icon = status_icon,
-                version_info = version_info,
-                installed = installed_map[name] ~= nil,
-                outdated = outdated_map[name] ~= nil,
-                ordinal = ordinal_prefix .. ' ' .. name,
-                details = item, -- Store full library details for preview
-              })
-            end
-          end
-          callback(results)
-        end)
-      end)
-    end)
-  end
-
-  fetch_data(function(initial_results)
+  fetch_library_data(function(initial_results)
     if not initial_results then
       return
     end
@@ -679,7 +760,7 @@ local function library_manager_telescope()
             local cb = nil
             if not close_permanently then
               cb = function()
-                fetch_data(function(new_results)
+                fetch_library_data(function(new_results)
                   if new_results then
                     local current_picker = action_state.get_current_picker(prompt_bufnr)
                     current_picker:refresh(create_finder(new_results), { reset_prompt = false })
@@ -746,82 +827,6 @@ local function library_manager_telescope()
         end,
       })
       :find()
-  end)
-end
-
-local function fetch_core_data(callback)
-  core.search(function(search_data)
-    if not search_data then
-      util.notify('Failed to load cores.', vim.log.levels.ERROR)
-      callback(nil)
-      return
-    end
-
-    -- Normalize search_data (usually a list of objects)
-    local search_list = search_data
-    if search_data.platforms then
-      search_list = search_data.platforms
-    end
-
-    core.list_installed(function(installed_data)
-      local installed_map = {}
-      if installed_data then
-        local list = installed_data
-        if installed_data.platforms then
-          list = installed_data.platforms
-        end
-        for _, c in ipairs(list) do
-          if c.id then
-            installed_map[c.id] = c.installed_version or 'installed'
-          end
-        end
-      end
-
-      core.list_outdated(function(outdated_data)
-        local outdated_map = {}
-        if outdated_data and outdated_data.platforms then
-          for _, p in ipairs(outdated_data.platforms) do
-            if p.id then
-              outdated_map[p.id] = p.latest or 'unknown'
-            end
-          end
-        end
-
-        local results = {}
-        for _, item in ipairs(search_list) do
-          local id = item.id
-          local latest_ver = item.latest_version or ''
-          local name = id
-          if item.releases and latest_ver ~= '' and item.releases[latest_ver] then
-            name = item.releases[latest_ver].name or id
-          end
-
-          local status_icon = ''
-          local version_info = ''
-          if installed_map[id] then
-            status_icon = '✓'
-            version_info = ' [' .. installed_map[id] .. ']'
-          end
-          if outdated_map[id] then
-            status_icon = '↑'
-            version_info = ' [Update: ' .. outdated_map[id] .. ']'
-          end
-
-          if id then
-            table.insert(results, {
-              id = id,
-              name = name,
-              status_icon = status_icon,
-              version_info = version_info,
-              installed = installed_map[id] ~= nil,
-              outdated = outdated_map[id] ~= nil,
-              details = item,
-            })
-          end
-        end
-        callback(results)
-      end)
-    end)
   end)
 end
 
@@ -909,90 +914,7 @@ function M.core_manager()
 
   util.notify('Loading core data...', vim.log.levels.INFO)
 
-  local function fetch_data(callback)
-    core.search(function(search_data)
-      if not search_data then
-        util.notify('Failed to load cores.', vim.log.levels.ERROR)
-        callback(nil)
-        return
-      end
-
-      -- Normalize search_data (usually a list of objects)
-      local search_list = search_data
-      if search_data.platforms then
-        search_list = search_data.platforms
-      end
-
-      core.list_installed(function(installed_data)
-        local installed_map = {}
-        if installed_data then
-          local list = installed_data
-          if installed_data.platforms then
-            list = installed_data.platforms
-          end
-          for _, c in ipairs(list) do
-            if c.id then
-              installed_map[c.id] = c.installed_version or 'installed'
-            end
-          end
-        end
-
-        core.list_outdated(function(outdated_data)
-          local outdated_map = {}
-          if outdated_data and outdated_data.platforms then
-            for _, p in ipairs(outdated_data.platforms) do
-              if p.id then
-                outdated_map[p.id] = p.latest or 'unknown'
-              end
-            end
-          end
-
-          local results = {}
-          for _, item in ipairs(search_list) do
-            local id = item.id
-            local latest_ver = item.latest_version or ''
-            local name = id
-            if item.releases and latest_ver ~= '' and item.releases[latest_ver] then
-              name = item.releases[latest_ver].name or id
-            end
-
-            local status_icon = ''
-            local version_info = ''
-            local ordinal_prefix = 'z'
-
-            if installed_map[id] then
-              status_icon = '✓'
-              version_info = ' [' .. installed_map[id] .. ']'
-              ordinal_prefix = 'm'
-            end
-
-            if outdated_map[id] then
-              status_icon = '↑'
-              version_info = ' [Update: ' .. outdated_map[id] .. ']'
-              ordinal_prefix = 'a'
-            end
-
-            if id then
-              table.insert(results, {
-                name = id, -- Use ID as key
-                display_name = name,
-                latest = latest_ver,
-                status_icon = status_icon,
-                version_info = version_info,
-                installed = installed_map[id] ~= nil,
-                outdated = outdated_map[id] ~= nil,
-                ordinal = ordinal_prefix .. ' ' .. name,
-                details = item,
-              })
-            end
-          end
-          callback(results)
-        end)
-      end)
-    end)
-  end
-
-  fetch_data(function(initial_results)
+  fetch_core_data(function(initial_results)
     if not initial_results then
       return
     end
@@ -1085,7 +1007,7 @@ function M.core_manager()
             local cb = nil
             if not close_permanently then
               cb = function()
-                fetch_data(function(new_results)
+                fetch_core_data(function(new_results)
                   if new_results then
                     local current_picker = action_state.get_current_picker(prompt_bufnr)
                     current_picker:refresh(create_finder(new_results), { reset_prompt = false })
@@ -1158,62 +1080,6 @@ function M.core_manager()
         end,
       })
       :find()
-  end)
-end
-
--- Shared fetch function for both Telescope and fallback manager
-local function fetch_library_data(callback)
-  lib.search(function(search_data)
-    if not search_data or not search_data.libraries then
-      util.notify('Failed to load libraries.', vim.log.levels.ERROR)
-      callback(nil)
-      return
-    end
-    lib.list_installed(function(installed_data)
-      local installed_map = {}
-      if installed_data and installed_data.installed_libraries then
-        for _, l in ipairs(installed_data.installed_libraries) do
-          if l.library and l.library.name then
-            installed_map[l.library.name] = l.library.version
-          end
-        end
-      end
-      lib.list_outdated(function(outdated_data)
-        local outdated_map = {}
-        if outdated_data and outdated_data.libraries then
-          for _, l in ipairs(outdated_data.libraries) do
-            if l.library and l.library.name then
-              outdated_map[l.library.name] = l.release and l.release.version or 'unknown'
-            end
-          end
-        end
-        local results = {}
-        for _, item in ipairs(search_data.libraries) do
-          local name = item.name
-          local status_icon = ''
-          local version_info = ''
-          if installed_map[name] then
-            status_icon = '✓'
-            version_info = ' [' .. installed_map[name] .. ']'
-          end
-          if outdated_map[name] then
-            status_icon = '↑'
-            version_info = ' [Update: ' .. outdated_map[name] .. ']'
-          end
-          if name then
-            table.insert(results, {
-              name = name,
-              status_icon = status_icon,
-              version_info = version_info,
-              installed = installed_map[name] ~= nil,
-              outdated = outdated_map[name] ~= nil,
-              details = item,
-            })
-          end
-        end
-        callback(results)
-      end)
-    end)
   end)
 end
 
