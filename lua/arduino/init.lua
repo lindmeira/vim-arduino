@@ -825,6 +825,29 @@ local function fetch_core_data(callback)
   end)
 end
 
+local function format_fallback_items(items, name_key)
+  local filtered = {}
+  for _, item in ipairs(items) do
+    local label = item[name_key] .. item.version_info
+    local use_emoji = config.options.manager_emoji ~= false
+    if use_emoji then
+      if item.outdated then
+        label = label .. ' 🟠'
+      elseif item.installed then
+        label = label .. ' 🟢'
+      end
+    else
+      if item.outdated then
+        label = label .. ' ↑'
+      elseif item.installed then
+        label = label .. ' ✓'
+      end
+    end
+    table.insert(filtered, { label = label, value = item })
+  end
+  return filtered
+end
+
 function M.core_manager_fallback()
   util.notify('Loading core data...', vim.log.levels.INFO)
   fetch_core_data(function(cores)
@@ -832,25 +855,7 @@ function M.core_manager_fallback()
       return
     end
 
-    local filtered = {}
-    for _, c in ipairs(cores) do
-      local label = c.id .. c.version_info
-      local use_emoji = config.options.manager_emoji ~= false
-      if use_emoji then
-        if c.outdated then
-          label = label .. ' 🟠'
-        elseif c.installed then
-          label = label .. ' 🟢'
-        end
-      else
-        if c.outdated then
-          label = label .. ' ↑'
-        elseif c.installed then
-          label = label .. ' ✓'
-        end
-      end
-      table.insert(filtered, { label = label, value = c })
-    end
+    local filtered = format_fallback_items(cores, 'id')
 
     vim.ui.select(filtered, {
       prompt = 'Select Arduino Core:',
@@ -1220,25 +1225,7 @@ function M.library_manager_fallback()
     end
 
     -- Prepare the full, unfiltered results list
-    local filtered = {}
-    for _, library in ipairs(libraries) do
-      local label = library.name .. library.version_info
-      local use_emoji = config.options.manager_emoji ~= false
-      if use_emoji then
-        if library.outdated then
-          label = label .. ' 🟠'
-        elseif library.installed then
-          label = label .. ' 🟢'
-        end
-      else
-        if library.outdated then
-          label = label .. ' ↑'
-        elseif library.installed then
-          label = label .. ' ✓'
-        end
-      end
-      table.insert(filtered, { label = label, value = library })
-    end
+    local filtered = format_fallback_items(libraries, 'name')
 
     local function open_results_window(filtered_items)
       vim.ui.select(filtered_items, {
