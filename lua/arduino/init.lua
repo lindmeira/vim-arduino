@@ -28,7 +28,7 @@ local function define_highlights()
         source = vim.api.nvim_get_hl(0, { name = fallback_name, link = false })
       end
 
-      local def = vim.deepcopy(source)
+      local def = vim.deepcopy(source) --[[@as vim.api.keyset.highlight]]
       def.bg = new_bg
       -- Clear any link just in case, though link=false should handle it
       def.link = nil
@@ -325,6 +325,7 @@ function M.serial()
   local killing_monitor = false
 
   -- Start terminal job (interactive) without callbacks
+  ---@diagnostic disable-next-line: deprecated
   local job_id = vim.fn.termopen(cmd)
 
   -- Handle exit status via event
@@ -628,11 +629,11 @@ local function library_manager_telescope()
     local lib_previewer = previewers.new_buffer_previewer {
       title = 'Library Details',
       define_preview = function(self, entry, _)
-        local lib = entry.value.details
-        local latest = lib.latest or {}
+        local library = entry.value.details
+        local latest = library.latest or {}
 
         local lines = {}
-        table.insert(lines, '# ' .. (lib.name or 'Unknown'))
+        table.insert(lines, '# ' .. (library.name or 'Unknown'))
         table.insert(lines, '')
         table.insert(lines, '**Author:** ' .. (latest.author or 'Unknown'))
         table.insert(lines, '**Maintainer:** ' .. (latest.maintainer or 'Unknown'))
@@ -1220,23 +1221,23 @@ function M.library_manager_fallback()
 
     -- Prepare the full, unfiltered results list
     local filtered = {}
-    for _, lib in ipairs(libraries) do
-      local label = lib.name .. lib.version_info
+    for _, library in ipairs(libraries) do
+      local label = library.name .. library.version_info
       local use_emoji = config.options.manager_emoji ~= false
       if use_emoji then
-        if lib.outdated then
+        if library.outdated then
           label = label .. ' 🟠'
-        elseif lib.installed then
+        elseif library.installed then
           label = label .. ' 🟢'
         end
       else
-        if lib.outdated then
+        if library.outdated then
           label = label .. ' ↑'
-        elseif lib.installed then
+        elseif library.installed then
           label = label .. ' ✓'
         end
       end
-      table.insert(filtered, { label = label, value = lib })
+      table.insert(filtered, { label = label, value = library })
     end
 
     local function open_results_window(filtered_items)
