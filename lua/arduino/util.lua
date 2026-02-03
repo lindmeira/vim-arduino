@@ -93,23 +93,33 @@ function M.notify(msg, level)
   end
 end
 
-function M.find_sketch_config(dir)
+function M.find_sketch_root(dir)
   dir = dir or vim.fn.expand '%:p:h'
-  -- local root = dir
   while true do
-    local sketch_yaml = dir .. '/sketch.yaml'
-    if vim.fn.filereadable(sketch_yaml) == 1 then
-      return sketch_yaml, 'yaml'
-    end
-    local sketch_json = dir .. '/sketch.json'
-    if vim.fn.filereadable(sketch_json) == 1 then
-      return sketch_json, 'json'
+    if #vim.fn.glob(dir .. '/*.ino', false, true) > 0 or #vim.fn.glob(dir .. '/*.pde', false, true) > 0 then
+      return dir
     end
     local next_dir = vim.fn.fnamemodify(dir, ':h')
     if next_dir == dir then
       break
     end
     dir = next_dir
+  end
+  return nil
+end
+
+function M.find_sketch_config(dir)
+  dir = dir or vim.fn.expand '%:p:h'
+  local root = M.find_sketch_root(dir)
+  if root then
+    local sketch_yaml = root .. '/sketch.yaml'
+    if vim.fn.filereadable(sketch_yaml) == 1 then
+      return sketch_yaml, 'yaml'
+    end
+    local sketch_json = root .. '/sketch.json'
+    if vim.fn.filereadable(sketch_json) == 1 then
+      return sketch_json, 'json'
+    end
   end
   return nil, nil
 end
@@ -134,10 +144,14 @@ end
 
 function M.update_sketch_config(key, value, dir)
   dir = dir or vim.fn.expand '%:p:h'
-  local sketch_file, type = M.find_sketch_config(dir)
+  local root = M.find_sketch_root(dir)
 
-  -- Always use YAML (sketch.yaml) for arduino-cli projects
-  local path = (type == 'yaml' and sketch_file) or (dir .. '/sketch.yaml')
+  if not root then
+    M.notify('Cannot update sketch.yaml: project folder not found.', vim.log.levels.WARN)
+    return
+  end
+
+  local path = root .. '/sketch.yaml'
   local cpu = M.get_sketch_config(dir) or {}
 
   if key == 'fqbn' then
@@ -164,26 +178,32 @@ function M.update_sketch_config(key, value, dir)
       M.restart_lsp()
     end
   else
-    M.notify('Failed to update sketch.yaml.', vim.log.levels.ERROR)
+    M.notify('Failed to update sketch.yaml at ' .. path, vim.log.levels.ERROR)
   end
 end
-
 function M.ensure_sketch_config(dir)
   dir = dir or vim.fn.expand '%:p:h'
   if not dir or dir == '' or dir == '.' then
     return
   end
-  local sketch_file, _ = M.find_sketch_config(dir)
-  if not sketch_file then
+
+  local root = M.find_sketch_root(dir)
+  local path
+  if root then
+    path = root .. '/sketch.yaml'
+  else
+    path = dir .. '/sketch.yaml'
+  end
+
+  if vim.fn.filereadable(path) == 0 then
     local default_yaml = 'default_fqbn: arduino:avr:uno\n'
-    local path = dir .. '/sketch.yaml'
     local f = io.open(path, 'w')
     if f then
       f:write(default_yaml)
       f:close()
       M.notify 'Created default sketch.yaml.'
     else
-      M.notify('Failed to create sketch.yaml.', vim.log.levels.ERROR)
+      M.notify('Failed to create sketch.yaml at ' .. path, vim.log.levels.ERROR)
     end
   end
 end
