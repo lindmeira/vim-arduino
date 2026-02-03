@@ -216,8 +216,10 @@ end
 
 --- Detect baud rate from Arduino sketch content
 ---@param lines table: Array of buffer lines to analyze
----@return number: Detected baud rate (defaults to 57600 if none found)
+---@return number: Detected baud rate (falls back to configured serial_baud or 9600)
 function M.detect_baud_rate(lines)
+  local default_baud = tonumber(config.options.original_baud) or tonumber(config.options.serial_baud) or 9600
+
   -- Look for Serial.begin() calls and return the first valid match
   for _, line in ipairs(lines) do
     -- Strip comments before pattern matching to avoid false positives
@@ -230,28 +232,28 @@ function M.detect_baud_rate(lines)
       end
       -- Found a Serial.begin but the baud rate is invalid
       M.notify('Invalid baud rate: ' .. baud_str, vim.log.levels.ERROR)
-      return config.options.original_baud or 9600
+      return default_baud
     end
   end
 
   -- No valid Serial.begin() found, return the configured default
-  return config.options.original_baud or 9600
+  return default_baud
 end
 
 --- Format bytes to human readable string
 ---@param b number|string: Bytes
 ---@return string: Formatted string
 local function format_bytes(b)
-  b = tonumber(b)
-  if not b then
+  local val = tonumber(b)
+  if not val then
     return '0B'
   end
-  if b >= 1048576 then
-    return string.format('%.1fMB', b / 1048576)
-  elseif b >= 1024 then
-    return string.format('%.1fKB', b / 1024)
+  if val >= 1048576 then
+    return string.format('%.1fMB', val / 1048576)
+  elseif val >= 1024 then
+    return string.format('%.1fKB', val / 1024)
   end
-  return b .. 'B'
+  return val .. 'B'
 end
 
 --- Parse memory usage from logs and return a formatted string
