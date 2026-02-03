@@ -500,7 +500,7 @@ function M.set_baud(baud, is_auto)
   util.notify(prefix .. b)
 end
 
-function M.library_manager()
+local function library_manager_telescope()
   if not config.options.use_telescope then
     util.notify('Library Manager requires Telescope support enabled.', vim.log.levels.WARN)
     return
@@ -1275,14 +1275,13 @@ function M.library_manager_fallback()
   end)
 end
 
-local orig_library_manager = M.library_manager
 function M.library_manager()
   if not config.options.use_telescope then
     return M.library_manager_fallback()
   end
   local ok, _ = pcall(require, 'telescope')
   if ok then
-    return orig_library_manager()
+    return library_manager_telescope()
   else
     return M.library_manager_fallback()
   end
