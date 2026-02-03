@@ -18,7 +18,7 @@ M.VALID_BAUD_RATES = {
   [2000000] = true,
 }
 
-  M.defaults = {
+M.defaults = {
   -- Set to false to disable emoji in fallback library/core manager lists
   manager_emoji = true,
 
