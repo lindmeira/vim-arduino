@@ -10,9 +10,15 @@ in any other operating system than Linux, and it's optimised for use with
 
 ## Requirements
 
-1. **Neovim 0.7+**
+1. **Neovim 0.8+**
 1. **arduino-cli**: [Installation instructions](https://arduino.github.io/arduino-cli/latest/installation/)
 1. **arduino-language-server** (Optional, but recommended for LSP support): [Installation instructions](https://github.com/arduino/arduino-language-server)
+1. **telescope.nvim** (Optional, but recommended for better UI): [Installation
+   instructions](https://github.com/nvim-telescope/telescope.nvim)
+1. **noice.nvim** (Optional, but recommended for better UI): [Installation
+   instructions](https://github.com/folke/noice.nvim)
+1. **simavr** (Optional, provides AVR simulation support)
+1. **avr-gdb** (Optional, provides software-based debugging support)
 
 ## Installation
 
@@ -32,12 +38,13 @@ in any other operating system than Linux, and it's optimised for use with
 
 ## Configuration
 
-Configure the plugin using the `setup` function. Defaults are shown below:
+Configure the plugin using the `setup` function. Defaults are shown below (check
+out file `lazy_setup.lua` for additional examples):
 
 ```lua
 require('arduino').setup({
     -- Default board to use if no sketch.yaml is found.
-    board = 'arduino:avr:uno',
+    -- board = 'arduino:avr:uno',
 
     -- Serial tool to use for the serial monitor.
     -- Supported tool names: 'arduino-cli' (default), 'screen', 'minicom', 'picocom'
@@ -48,7 +55,7 @@ require('arduino').setup({
     -- auto_baud = false,
 
     -- Baud rate for the internal serial monitor
-    serial_baud = 9600,
+    serial_baud = 57600,
 
     -- Fallback Library/Core Manager status icons (emoji/tick)
     -- manager_emoji = false, -- set false for tick/up-arrow fallback
@@ -82,8 +89,7 @@ This plugin is designed to work hand-in-hand with `arduino-cli`, and it uses
 - **Smart Compilation:** To save time, the plugin automatically detects if a
   full recompile is needed by checking file timestamps and the board configuration
   (FQBN) used for the previous build (`.arduino.nvim.json`). If nothing has
-  changed, it skips compilation
-  and proceeds directly to upload or simulation.
+  changed, it skips compilation and proceeds directly to upload or simulation.
 - **Auto-Save Prompt:** Before any build or upload, the plugin checks if your
   buffer has unsaved changes and prompts you to save, ensuring you always flash
   the latest code.
